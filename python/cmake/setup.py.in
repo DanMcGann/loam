@@ -1,0 +1,28 @@
+"""Setup file to install the ScanContext python package."""
+
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    from distutils.core import setup, find_packages
+
+packages = find_packages(where=".")
+print("PACKAGES: ", packages)
+
+package_data = {
+    '': [
+        "./*.so",
+        "./*.dll",
+    ]
+}
+
+setup(
+    name='Loam',
+    description='Lidar Odometry and Mapping Library',
+    author='Dan McGann',
+    author_email='danmcgann@cmu.edu',
+    keywords='slam robotics localization mapping optimization',
+    packages=packages,
+    include_package_data=True,
+    package_data=package_data,
+    zip_safe=False,
+)
