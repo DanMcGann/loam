@@ -11,6 +11,7 @@
 #pragma once
 #include <Eigen/Dense>
 #include <iostream>
+namespace loam {
 
 /**
  * ######## ##    ## ########  ########  ######
@@ -51,6 +52,7 @@ struct Pose3d {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
+// TODO (dan) maybe move this to an internal namespace since it is only used in registraiton
 /** @brief A Line in 3D space.
  * We represent lines by two points on that line as it makes it easier when computing point-to-line distances.
  * These points cannot be the same, and for numeric stability should be reasonable far away >0.1
@@ -164,3 +166,5 @@ template <typename T>
 T pointToPlaneDistance(const Eigen::Matrix<T, 3, 1> &point, const Eigen::Matrix<T, 3, 1> &normal, const T distance) {
   return abs(normal.dot(point) - distance);
 }
+
+}  // namespace loam

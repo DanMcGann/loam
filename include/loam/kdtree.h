@@ -26,6 +26,7 @@ namespace loam {
  *    ##       ##    ##        ########  ######
  */
 
+// TODO (dan) maybe move this to an internal namespace since it is only used in registraiton
 /** @brief Adaptor class required by nanoflann
  * This class unfortunately needs to use our own adaptor (Accessor) to extract info from the points.
  * Thankfully it is not too complected to do so
