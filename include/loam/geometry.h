@@ -34,6 +34,8 @@ struct Pose3d {
   Pose3d(Eigen::Quaterniond rot, Eigen::Vector3d trans) : rotation(rot), translation(trans) {}
   /// @brief Default Constructor
   Pose3d() : rotation(Eigen::Quaterniond::Identity()), translation(Eigen::Vector3d::Zero()) {}
+  /// @brief Static Identity Constructor
+  static Pose3d Identity() { return Pose3d(Eigen::Quaterniond::Identity(), Eigen::Vector3d::Zero()); }
 
   /// @brief Returns in inverse of the pose [P^{-1}]
   Pose3d inverse() const {
