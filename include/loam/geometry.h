@@ -46,13 +46,7 @@ struct Pose3d {
   }
 
   /// @brief A pose e_T_s acts on a point p_s according to [p_e = e_T_s * p_s]
-  Eigen::Vector3d act(const Eigen::Vector3d &p) { return rotation * p + translation; }
-
-  void print() const {
-    std::cout << "q[w, x, y, z]: " << rotation.w() << ", " << rotation.x() << ", " << rotation.y() << ", "
-              << rotation.z() << std::endl;
-    std::cout << "t[x, y, z]: " << translation(0) << ", " << translation(1) << ", " << translation(2) << std::endl;
-  }
+  Eigen::Vector3d act(const Eigen::Vector3d &p) const { return rotation * p + translation; }
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

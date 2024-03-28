@@ -161,6 +161,19 @@ template <typename PointType, template <typename> class Accessor = FieldAccessor
 std::vector<bool> computeValidPoints(const std::vector<PointType>& input_scan, const LidarParams& lidar_params,
                                      const FeatureExtractionParams& params = FeatureExtractionParams());
 
+/// @brief Converts Loam Features to Eigen [used in registration for efficiency]
+template <typename PointType, template <typename> class Accessor = FieldAccessor>
+LoamFeatures<Eigen::Vector3d> featuresToEigen(const LoamFeatures<PointType>& in_features) {
+  LoamFeatures<Eigen::Vector3d> result;
+  for (const PointType pt : in_features.edge_points) {
+    result.edge_points.push_back(pointToEigen<PointType, Accessor>(pt));
+  }
+  for (const PointType pt : in_features.planar_points) {
+    result.planar_points.push_back(pointToEigen<PointType, Accessor>(pt));
+  }
+  return result;
+}
+
 }  // namespace loam
 
 // Include the actual implementation of this module

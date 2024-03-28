@@ -30,33 +30,22 @@ namespace loam {
  * This class unfortunately needs to use our own adaptor (Accessor) to extract info from the points.
  * Thankfully it is not too complected to do so
  */
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
 struct KDTreeDataAdaptor {
-  const std::vector<PointType>& data;
+  const std::vector<Eigen::Vector3d>& data;
   // Interface required by nanoflann
   size_t kdtree_get_point_count() const { return data.size(); }
-  double kdtree_get_pt(const size_t idx, const size_t dim) const {
-    if (dim == 0) return Accessor<PointType>::x(data.at(idx));
-    if (dim == 1) return Accessor<PointType>::y(data.at(idx));
-    if (dim == 2) return Accessor<PointType>::z(data.at(idx));
-    throw std::runtime_error("Dev error kdtree set to > 3 dim");
-  }
+  double kdtree_get_pt(const size_t idx, const size_t dim) const { return data.at(idx)(dim); }
   template <class BBOX>
   bool kdtree_get_bbox(BBOX&) const {
     return false;
   }
-  KDTreeDataAdaptor(const std::vector<PointType>& data) : data(data) {}
+  KDTreeDataAdaptor(const std::vector<Eigen::Vector3d>& data) : data(data) {}
 };
 
 /// @brief Type for the KDTree distance metric [required by nanoflann]
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-using KDTreeDistance = nanoflann::L2_Simple_Adaptor<double, KDTreeDataAdaptor<PointType, Accessor>>;
-
+using KDTreeDistance = nanoflann::L2_Simple_Adaptor<double, KDTreeDataAdaptor>;
 /// @brief Type for the KDTree using a compile time dimension of 3 for 3d pointclouds
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-using KDTree =
-    nanoflann::KDTreeSingleIndexAdaptor<KDTreeDistance<PointType, Accessor>, KDTreeDataAdaptor<PointType, Accessor>, 3>;
-
+using KDTree = nanoflann::KDTreeSingleIndexAdaptor<KDTreeDistance, KDTreeDataAdaptor, 3>;
 /// @brief Type for the KDTree parameters for convience
 using KDTreeParams = nanoflann::KDTreeSingleIndexAdaptorParams;
 
@@ -71,14 +60,12 @@ using KDTreeParams = nanoflann::KDTreeSingleIndexAdaptorParams;
  */
 
 /** @brief Runs a radius limited K Nearest Neighbor (knn) search on the tree.
- * @param tree: The KDTree overwhich to search
+ * @param tree: The KDTree over which to search
  * @param query: The query point for which neighbors are found
  * @param k: The number of points to search for
  * @param max_dist: The radius limit for the search. If max_dist <= 0 no radius limit is used
  */
-// TODO (dan) remove templatization from this wrapper since we will only use with eigen now
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-std::vector<size_t> knnSearch(const KDTree<PointType, Accessor>& tree, const Eigen::Vector3d& query, const size_t k,
+std::vector<size_t> knnSearch(const KDTree& tree, const Eigen::Vector3d& query, const size_t k,
                               const double max_dist = -1) {
   // Setup the search
   std::vector<size_t> knn_indicies(k);

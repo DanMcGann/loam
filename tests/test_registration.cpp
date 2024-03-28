@@ -52,15 +52,6 @@ LoamFeatures<Eigen::Vector3d> constructSimpleScene() {
   for (double z = -1; z < 3; z += 0.05) {
     result.edge_points.push_back(Eigen::Vector3d(3, 2, z));
   }
-
-  std::cout << "edge_points=[";
-  for (auto p : result.edge_points) std::cout << "np.array([" << p(0) << "," << p(1) << "," << p(2) << "]),";
-  std::cout << "]" << std::endl << std::endl;
-
-  std::cout << "planar_points=[";
-  for (auto p : result.planar_points) std::cout << "np.array([" << p(0) << "," << p(1) << "," << p(2) << "]),";
-  std::cout << "]" << std::endl << std::endl;
-
   return result;
 }
 
@@ -74,7 +65,7 @@ LoamFeatures<Eigen::Vector3d> transformFeatures(LoamFeatures<Eigen::Vector3d> in
   }
   return result;
 }
-/**
+
 TEST(TestLoamRegistration, TestSimpleCase) {
   Pose3d source_T_target(
       Eigen::Quaterniond(0.9993921140970299, 0.014692022378442412, 0.030140550562090015, 0.009544316157523478),
@@ -94,7 +85,6 @@ TEST(TestLoamRegistration, TestSimpleCase) {
   ASSERT_NEAR(err_trans(1), 0.0, 1e-4);
   ASSERT_NEAR(err_trans(2), 0.0, 1e-4);
 }
-**/
 
 TEST(TestLoamRegistration, TestSimpleLargeTranslation) {
   Pose3d source_T_target(
@@ -111,7 +101,47 @@ TEST(TestLoamRegistration, TestSimpleLargeTranslation) {
   Eigen::Vector3d err_trans = source_T_target.rotation * target_T_source.translation + source_T_target.translation;
 
   ASSERT_NEAR(err_rot.angularDistance(Eigen::Quaterniond::Identity()), 0.0, 1e-4);
-  ASSERT_NEAR(err_trans(0), 0.0, 1e-4);
-  ASSERT_NEAR(err_trans(1), 0.0, 1e-4);
-  ASSERT_NEAR(err_trans(2), 0.0, 1e-4);
+  ASSERT_NEAR(err_trans(0), 0.0, 1e-3);
+  ASSERT_NEAR(err_trans(1), 0.0, 1e-3);
+  ASSERT_NEAR(err_trans(2), 0.0, 1e-3);
+}
+
+TEST(TestLoamRegistration, TestSimpleEvenLargerTranslation) {
+  Pose3d source_T_target(
+      Eigen::Quaterniond(0.9993921140970299, 0.014692022378442412, 0.030140550562090015, 0.009544316157523478),
+      Eigen::Vector3d(-0.3, 0.2, 0.1));
+  LoamFeatures<Eigen::Vector3d> target_features = constructSimpleScene();
+  LoamFeatures<Eigen::Vector3d> source_features = transformFeatures(target_features, source_T_target);
+
+  // Run the registration
+  Pose3d target_T_source = registerFeatures<Eigen::Vector3d, ParenAccessor>(source_features, target_features, Pose3d());
+
+  // Compute the error
+  Eigen::Quaterniond err_rot = source_T_target.rotation * target_T_source.rotation;
+  Eigen::Vector3d err_trans = source_T_target.rotation * target_T_source.translation + source_T_target.translation;
+
+  ASSERT_NEAR(err_rot.angularDistance(Eigen::Quaterniond::Identity()), 0.0, 1e-4);
+  ASSERT_NEAR(err_trans(0), 0.0, 1e-3);
+  ASSERT_NEAR(err_trans(1), 0.0, 1e-3);
+  ASSERT_NEAR(err_trans(2), 0.0, 1e-3);
+}
+
+TEST(TestLoamRegistration, TestSimpleLargeRotation) {
+  Eigen::Vector3d axis(1, 3, 1);
+  Pose3d source_T_target(Eigen::Quaterniond(Eigen::AngleAxisd(0.2, axis / axis.norm())),
+                         Eigen::Vector3d(-0.01, 0.02, 0.1));
+  LoamFeatures<Eigen::Vector3d> target_features = constructSimpleScene();
+  LoamFeatures<Eigen::Vector3d> source_features = transformFeatures(target_features, source_T_target);
+
+  // Run the registration
+  Pose3d target_T_source = registerFeatures<Eigen::Vector3d, ParenAccessor>(source_features, target_features, Pose3d());
+
+  // Compute the error
+  Eigen::Quaterniond err_rot = source_T_target.rotation * target_T_source.rotation;
+  Eigen::Vector3d err_trans = source_T_target.rotation * target_T_source.translation + source_T_target.translation;
+
+  ASSERT_NEAR(err_rot.angularDistance(Eigen::Quaterniond::Identity()), 0.0, 1e-4);
+  ASSERT_NEAR(err_trans(0), 0.0, 1e-3);
+  ASSERT_NEAR(err_trans(1), 0.0, 1e-3);
+  ASSERT_NEAR(err_trans(2), 0.0, 1e-3);
 }

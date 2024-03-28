@@ -16,11 +16,16 @@
  * @date Mar 2024
  */
 #pragma once
+#include <ceres/ceres.h>
+
+#include <Eigen/Dense>
 #include <nanoflann.hpp>
 
 #include "loam/geometry.h"
+#include "loam/kdtree.h"
 #include "loam/loam_common.h"
 #include "loam/loam_features.h"
+#include "loam/loam_loss_functions.h"
 
 namespace loam {
 
@@ -62,9 +67,9 @@ struct RegistrationParams {
   /// Reasonable numbers depend on real-time and accuracy requirements of the system
   size_t max_iterations{10};
   /// @brief The convergence threshold for angular change of the pose we are estimating (radians)
-  double rotation_convergence_thresh{1e-6};
+  double rotation_convergence_thresh{1e-3};
   /// @brief The convergence threshold for position change of the pose we are estimating (point units)
-  double position_convergence_thresh{1e-4};
+  double position_convergence_thresh{1e-2};
 };
 
 /**
@@ -86,6 +91,36 @@ struct RegistrationParams {
 template <typename PointType, template <typename> class Accessor = FieldAccessor>
 Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeatures<PointType>& target,
                         const Pose3d& target_T_source_init, const RegistrationParams& params = RegistrationParams());
+
+/**
+ * ##     ## ######## ##       ########  ######## ########   ######
+ * ##     ## ##       ##       ##     ## ##       ##     ## ##    ##
+ * ##     ## ##       ##       ##     ## ##       ##     ## ##
+ * ######### ######   ##       ########  ######   ########   ######
+ * ##     ## ##       ##       ##        ##       ##   ##         ##
+ * ##     ## ##       ##       ##        ##       ##    ##  ##    ##
+ * ##     ## ######## ######## ##        ######## ##     ##  ######
+ */
+namespace registration_internal {
+
+/** @brief Computes associations between edge points in source and edges in target, validates the associations, and adds
+ * the appropriate cost function to the ceres problem.
+ * NOTE: Params as named identical to their name in the body of registerFeatures
+ * WARN: Mutates problem (mutation used to avoid an extra iteration over all cost functions)
+ */
+void associateEdges(const RegistrationParams& params, const LoamFeatures<Eigen::Vector3d>& source_eig,
+                    const LoamFeatures<Eigen::Vector3d>& target_eig, const KDTree& target_edge_kdtree,
+                    const Pose3d& target_T_source_est, Pose3d& estimate_update, ceres::Problem& problem);
+
+/** @brief Computes associations between planar points in source and planes in target, validates the associations, and
+ * adds the appropriate cost function to the ceres problem.
+ * NOTE: Params as named identical to their name in the body of registerFeatures
+ * WARN: Mutates problem (mutation used to avoid an extra iteration over all cost functions)
+ */
+void associatePlanes(const RegistrationParams& params, const LoamFeatures<Eigen::Vector3d>& source_eig,
+                     const LoamFeatures<Eigen::Vector3d>& target_eig, const KDTree& target_plane_kdtree,
+                     const Pose3d& target_T_source_est, Pose3d& estimate_update, ceres::Problem& problem);
+};  // namespace registration_internal
 
 }  // namespace loam
 
