@@ -11,7 +11,8 @@ namespace loam {
 /*********************************************************************************************************************/
 template <typename PointType, template <typename> class Accessor = FieldAccessor>
 Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeatures<PointType>& target,
-                        const Pose3d& target_T_source_init, const RegistrationParams& params) {
+                        const Pose3d& target_T_source_init, const RegistrationParams& params,
+                        std::shared_ptr<RegistrationDetail> detail) {
   // Convert features to eigen once here to avoid repeated conversions later
   LoamFeatures<Eigen::Vector3d> source_eig = featuresToEigen<PointType, Accessor>(source);
   LoamFeatures<Eigen::Vector3d> target_eig = featuresToEigen<PointType, Accessor>(target);
@@ -24,6 +25,7 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
 
   // Setup the parameters of the optimization (the relative pose)
   Pose3d target_T_source_est(target_T_source_init);
+  RegistrationDetail::TerminationType termination_type = RegistrationDetail::TerminationType::MAX_ITER;
   for (size_t iter_count = 0; iter_count < params.max_iterations; iter_count++) {
     // Define the Ceres Problem
     ceres::Problem::Options problem_options;
@@ -35,10 +37,15 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
     problem.AddParameterBlock(estimate_update.translation.data(), 3, new ceres::EuclideanManifold<3>());
 
     // Compute Associations and accumulate the optimization problem [WARN: Mutates "problem"]
-    registration_internal::associateEdges(params, source_eig, target_eig, target_edge_kdtree, target_T_source_est,
-                                          estimate_update, problem);
-    registration_internal::associatePlanes(params, source_eig, target_eig, target_plane_kdtree, target_T_source_est,
-                                           estimate_update, problem);
+    auto edge_assoc = registration_internal::associateEdges(params, source_eig, target_eig, target_edge_kdtree,
+                                                            target_T_source_est, estimate_update, problem);
+    auto plane_assoc = registration_internal::associatePlanes(params, source_eig, target_eig, target_plane_kdtree,
+                                                              target_T_source_est, estimate_update, problem);
+
+    if (edge_assoc.size() + plane_assoc.size() < params.min_associations) {
+      termination_type = RegistrationDetail::TerminationType::INSUFFICIENT_ASSOCIATIONS;
+      break;
+    }
 
     // Solve the problem
     ceres::Solver::Options options;
@@ -47,6 +54,11 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
+    // If configured Fill out the detail
+    if (detail) {
+      detail->iteration_info.emplace_back(target_T_source_est, edge_assoc, plane_assoc, estimate_update);
+    }
+
     // Update the solution
     target_T_source_est = target_T_source_est.compose(estimate_update);
 
@@ -54,10 +66,12 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
     const double angle_change = estimate_update.rotation.angularDistance(Eigen::Quaterniond::Identity());
     const double position_change = estimate_update.translation.norm();
     if (angle_change < params.rotation_convergence_thresh && position_change < params.position_convergence_thresh) {
+      termination_type = RegistrationDetail::TerminationType::CONVERGED;
       break;
     }
   }
-
+  // Fill out termination reason in detail if it exists
+  if (detail) detail->termination_type = termination_type;
   return target_T_source_est;
 }
 
@@ -72,13 +86,18 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
  */
 /*********************************************************************************************************************/
 namespace registration_internal {
-void associateEdges(const RegistrationParams& params, const LoamFeatures<Eigen::Vector3d>& source_eig,
-                    const LoamFeatures<Eigen::Vector3d>& target_eig, const KDTree& target_edge_kdtree,
-                    const Pose3d& target_T_source_est, Pose3d& estimate_update, ceres::Problem& problem) {
+std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& params,
+                                                      const LoamFeatures<Eigen::Vector3d>& source_eig,
+                                                      const LoamFeatures<Eigen::Vector3d>& target_eig,
+                                                      const KDTree& target_edge_kdtree,
+                                                      const Pose3d& target_T_source_est, Pose3d& estimate_update,
+                                                      ceres::Problem& problem) {
+  std::vector<std::pair<size_t, size_t>> edge_associations;
+  edge_associations.reserve(source_eig.edge_points.size());
   // Compute Edge Associations
-  for (const Eigen::Vector3d& point_src : source_eig.edge_points) {
+  for (size_t source_idx = 0; source_idx < source_eig.edge_points.size(); source_idx++) {
     // Transform the point into the target frame using the current solution
-    const Eigen::Vector3d point_tgt = target_T_source_est.act(point_src);
+    const Eigen::Vector3d point_tgt = target_T_source_est.act(source_eig.edge_points.at(source_idx));
 
     // Associate the query point with target points
     std::vector<size_t> neighbor_edge_idxes =
@@ -98,16 +117,24 @@ void associateEdges(const RegistrationParams& params, const LoamFeatures<Eigen::
     // Construct the cost function and add it to the problem
     problem.AddResidualBlock(EdgeCostFunction::Create(point_tgt, line), new ceres::HuberLoss(1.0),
                              estimate_update.rotation.coeffs().data(), estimate_update.translation.data());
+    // Accumulate the association
+    edge_associations.emplace_back(source_idx, neighbor_edge_idxes.front());
   }
+  return edge_associations;
 }
 
 /*********************************************************************************************************************/
-void associatePlanes(const RegistrationParams& params, const LoamFeatures<Eigen::Vector3d>& source_eig,
-                     const LoamFeatures<Eigen::Vector3d>& target_eig, const KDTree& target_plane_kdtree,
-                     const Pose3d& target_T_source_est, Pose3d& estimate_update, ceres::Problem& problem) {
-  for (const Eigen::Vector3d& point_src : source_eig.planar_points) {
+std::vector<std::pair<size_t, size_t>> associatePlanes(const RegistrationParams& params,
+                                                       const LoamFeatures<Eigen::Vector3d>& source_eig,
+                                                       const LoamFeatures<Eigen::Vector3d>& target_eig,
+                                                       const KDTree& target_plane_kdtree,
+                                                       const Pose3d& target_T_source_est, Pose3d& estimate_update,
+                                                       ceres::Problem& problem) {
+  std::vector<std::pair<size_t, size_t>> plane_associations;
+  plane_associations.reserve(source_eig.planar_points.size());
+  for (size_t source_idx = 0; source_idx < source_eig.planar_points.size(); source_idx++) {
     // Transform the point into the target frame using the current solution
-    const Eigen::Vector3d point_tgt = target_T_source_est.act(point_src);
+    const Eigen::Vector3d point_tgt = target_T_source_est.act(source_eig.planar_points.at(source_idx));
 
     // Associate the query point with target points
     std::vector<size_t> neighbor_plane_idxes =
@@ -127,7 +154,10 @@ void associatePlanes(const RegistrationParams& params, const LoamFeatures<Eigen:
     // Construct the cost function and add it to the problem
     problem.AddResidualBlock(PlaneCostFunction::Create(point_tgt, plane), new ceres::HuberLoss(1.0),
                              estimate_update.rotation.coeffs().data(), estimate_update.translation.data());
+    // Accumulate the association
+    plane_associations.emplace_back(source_idx, neighbor_plane_idxes.front());
   }
+  return plane_associations;
 }
 
 }  // namespace registration_internal
