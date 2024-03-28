@@ -3,7 +3,11 @@
  * 1) Planar Features
  * 2) Edge Features
  * Features are identified based on "curvature" [1] Eq.(1) accounting for unreliable edge cases like planes parallel to
- * the LiDAR beam and points bordering potentially occluded regions  [1] Fig. 4
+ * the LiDAR beam and points bordering potentially occluded regions  [1] Fig. 4.
+ *
+ * Features are found independently in each scan line from the lidar. Thus LOAM is reliant of having a structured
+ * pointcloud. Specifically the feature extraction module requires pointclouds to be in row major order.
+ * This is intended to help with caching as each scan-line is searched over and thus efficiency in the long run.
  *
  * [1] Ji Zhang and Sanjiv Singh, "LOAM: Lidar Odometry and Mapping in Real-time,"
  *     in Proceedings of Robotics: Science and Systems, 2014.
@@ -96,7 +100,7 @@ bool curvatureComparator(const PointCurvature& lhs, const PointCurvature& rhs) {
  */
 
 /** @brief Extracts and returns LOAM features from a LiDAR scan. Main entry point for using this module.
- * @param input_scan: The LiDAR Scan
+ * @param input_scan: The LiDAR Scan, organized in row-major order
  * @param lidar_params: The parameters for the lidar that observed input_scan
  * @tparam PointType Template for point type see README.md
  */
@@ -105,7 +109,7 @@ LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan
                                         const FeatureExtractionParams& params = FeatureExtractionParams());
 
 /** @brief Computes the curvature [1] Eq. (1) of each point in the given LiDAR scan
- * @param input_scan: The LiDAR scan
+ * @param input_scan: The LiDAR scan, organized in row-major order
  * @param lidar_params: The parameters for the lidar that observed input_scan
  * @tparam PointType Template for point type see README.md
  * @WARN Assumes that │S│ = 10 in Eq. (1) (i.e. search 5 points on either side)
@@ -153,7 +157,7 @@ std::vector<PointCurvature> computeCurvature(const std::vector<PointType>& input
  *      │              ^Lidar         │
  *      └─────────────────────────────┘
  * 4. The point is on a plane nearly parallel to the LiDAR Beam
- * @param input_scan: The LiDAR scan
+ * @param input_scan: The LiDAR scan, organized in row-major order
  * @param lidar_params: The parameters for the lidar that observed input_scan
  * @tparam PointType Template for point type see README.md
  */
