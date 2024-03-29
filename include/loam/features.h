@@ -18,7 +18,7 @@
 #pragma once
 #include <vector>
 
-#include "loam/loam_common.h"
+#include "loam/common.h"
 
 namespace loam {
 
@@ -256,4 +256,4 @@ bool markParallelInvalid(const size_t& idx, const double& prev_point_range, cons
 }  // namespace loam
 
 // Include the actual implementation of this module
-#include "loam/loam_features-inl.h"
+#include "loam/features-inl.h"

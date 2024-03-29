@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "loam/loam_features.h"
+#include "loam/features.h"
 
 namespace loam {
 

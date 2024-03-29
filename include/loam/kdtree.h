@@ -12,7 +12,7 @@
 #pragma once
 #include <nanoflann.hpp>
 
-#include "loam/loam_common.h"
+#include "loam/common.h"
 
 namespace loam {
 namespace kdtree_internal {

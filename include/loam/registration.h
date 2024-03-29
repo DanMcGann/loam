@@ -23,9 +23,9 @@
 
 #include "loam/geometry.h"
 #include "loam/kdtree.h"
-#include "loam/loam_common.h"
-#include "loam/loam_features.h"
-#include "loam/loam_loss_functions.h"
+#include "loam/common.h"
+#include "loam/features.h"
+#include "loam/loss_functions.h"
 
 namespace loam {
 
@@ -172,4 +172,4 @@ std::vector<std::pair<size_t, size_t>> associatePlanes(const RegistrationParams&
 }  // namespace loam
 
 // Include the actual implementation of this module
-#include "loam/loam_registration-inl.h"
+#include "loam/registration-inl.h"

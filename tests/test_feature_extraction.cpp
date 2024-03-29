@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "loam/loam_common.h"
-#include "loam/loam_features.h"
+#include "loam/common.h"
+#include "loam/features.h"
 
 using namespace loam;
 

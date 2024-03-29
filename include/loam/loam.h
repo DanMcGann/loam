@@ -6,7 +6,7 @@
 
 #include "loam/geometry.h"
 #include "loam/kdtree.h"
-#include "loam/loam_common.h"
-#include "loam/loam_features.h"
-#include "loam/loam_loss_functions.h"
-#include "loam/loam_registration.h"
+#include "loam/common.h"
+#include "loam/features.h"
+#include "loam/loss_functions.h"
+#include "loam/registration.h"
