@@ -15,18 +15,8 @@
 #include "loam/loam_common.h"
 
 namespace loam {
+namespace kdtree_internal {
 
-/**
- * ######## ##    ## ########  ########  ######
- *    ##     ##  ##  ##     ## ##       ##    ##
- *    ##      ####   ##     ## ##       ##
- *    ##       ##    ########  ######    ######
- *    ##       ##    ##        ##             ##
- *    ##       ##    ##        ##       ##    ##
- *    ##       ##    ##        ########  ######
- */
-
-// TODO (dan) maybe move this to an internal namespace since it is only used in registraiton
 /** @brief Adaptor class required by nanoflann
  * This class unfortunately needs to use our own adaptor (Accessor) to extract info from the points.
  * Thankfully it is not too complected to do so
@@ -50,16 +40,6 @@ using KDTree = nanoflann::KDTreeSingleIndexAdaptor<KDTreeDistance, KDTreeDataAda
 /// @brief Type for the KDTree parameters for convience
 using KDTreeParams = nanoflann::KDTreeSingleIndexAdaptorParams;
 
-/**
- * #### ##    ## ######## ######## ########  ########    ###     ######  ########
- *  ##  ###   ##    ##    ##       ##     ## ##         ## ##   ##    ## ##
- *  ##  ####  ##    ##    ##       ##     ## ##        ##   ##  ##       ##
- *  ##  ## ## ##    ##    ######   ########  ######   ##     ## ##       ######
- *  ##  ##  ####    ##    ##       ##   ##   ##       ######### ##       ##
- *  ##  ##   ###    ##    ##       ##    ##  ##       ##     ## ##    ## ##
- * #### ##    ##    ##    ######## ##     ## ##       ##     ##  ######  ########
- */
-
 /** @brief Runs a radius limited K Nearest Neighbor (knn) search on the tree.
  * @param tree: The KDTree over which to search
  * @param query: The query point for which neighbors are found
@@ -67,24 +47,11 @@ using KDTreeParams = nanoflann::KDTreeSingleIndexAdaptorParams;
  * @param max_dist: The radius limit for the search. If max_dist <= 0 no radius limit is used
  */
 std::vector<size_t> knnSearch(const KDTree& tree, const Eigen::Vector3d& query, const size_t k,
-                              const double max_dist = -1) {
-  // Setup the search
-  std::vector<size_t> knn_indicies(k);
-  std::vector<double> knn_distances_sq(k);
-  nanoflann::KNNResultSet<double> result_set(k);
-  result_set.init(&knn_indicies[0], &knn_distances_sq[0]);
+                              const double max_dist = -1);
 
-  // Run the search on the kdtree
-  tree.findNeighbors(result_set, &query[0]);
-
-  // Setup the return structure
-  std::vector<size_t> result;
-
-  // Add any valid neighbors to the result
-  for (size_t i = 0; i < result_set.size(); i++) {
-    if (max_dist <= 0 || std::sqrt(knn_distances_sq[i]) < max_dist) result.push_back(knn_indicies[i]);
-  }
-  return result;
-}
+}  // namespace kdtree_internal
 
 }  // namespace loam
+
+// Include the actual implementation
+#include "loam/kdtree-inl.h"

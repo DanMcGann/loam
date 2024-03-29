@@ -85,15 +85,6 @@ double pointRange(const PointType& pt) {
                    + Accessor<PointType>::z(pt) * Accessor<PointType>::z(pt));
 }
 
-/// @brief Computes the squared distance between two points
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-double pointSqDist(const PointType& pt_a, const PointType& pt_b) {
-  double dx = Accessor<PointType>::x(pt_a) - Accessor<PointType>::x(pt_b);
-  double dy = Accessor<PointType>::y(pt_a) - Accessor<PointType>::y(pt_b);
-  double dz = Accessor<PointType>::z(pt_a) - Accessor<PointType>::z(pt_b);
-  return dx * dx + dy * dy + dz * dz;
-}
-
 /// @brief Converts a point type into an Eigen 3d vector
 template <typename PointType, template <typename> class Accessor = FieldAccessor>
 Eigen::Vector3d pointToEigen(const PointType& pt) {

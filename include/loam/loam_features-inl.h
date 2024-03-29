@@ -14,7 +14,7 @@ LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan
                                         const FeatureExtractionParams& params) {
   validateLidarScan(input_scan, lidar_params);
   // Initialize Results
-  LoamFeatures<PointType> result;
+  LoamFeatures<PointType> out_features;
   // Compute the number of points in each sector given the parameters
   const size_t points_per_sector = lidar_params.points_per_line / params.number_sectors;
 
@@ -29,52 +29,25 @@ LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan
     // Independently detect features in each sector of this scan_line
     for (size_t sector_idx = 0; sector_idx < params.number_sectors; sector_idx++) {
       // Get the point index of the sector start and sector end
-      const size_t sector_start_point =
-          (scan_line_idx * lidar_params.points_per_line) + (sector_idx * points_per_sector);
+      const size_t sector_start_pt = (scan_line_idx * lidar_params.points_per_line) + (sector_idx * points_per_sector);
       // Special case for end point as we add any reminder points to the last sector
-      const size_t sector_end_point = (sector_idx == params.number_sectors - 1)
-                                          ? ((scan_line_idx + 1) * lidar_params.points_per_line)
-                                          : sector_start_point + points_per_sector;
+      const size_t sector_end_pt = (sector_idx == params.number_sectors - 1)
+                                       ? ((scan_line_idx + 1) * lidar_params.points_per_line)
+                                       : sector_start_pt + points_per_sector;
 
       // Sort the points based on curvature
-      std::sort(curvature.begin() + sector_start_point, curvature.begin() + sector_end_point, curvatureComparator);
+      std::sort(curvature.begin() + sector_start_pt, curvature.begin() + sector_end_pt, curvatureComparator);
 
-      size_t num_sector_edge_features = 0;
-      size_t num_sector_planar_features = 0;
-      // Search largest to smallest curvature [i.e. edge features]
-      for (size_t sorted_curv_idx_p1 = sector_end_point; sorted_curv_idx_p1 > sector_start_point;
-           sorted_curv_idx_p1--) {
-        const PointCurvature curv = curvature[sorted_curv_idx_p1 - 1];  // subtraction as loop cannot go negative
-        if (valid_mask[curv.index] && curv.curvature > params.edge_feat_threshold) {
-          result.edge_points.push_back(input_scan.at(curv.index));  // Add to edge points
-          for (size_t n = 0; n < params.neighbor_points; n++) {     // update mask
-            valid_mask[curv.index + n] = false;
-            valid_mask[curv.index - n] = false;
-          }
-          num_sector_edge_features++;
-        }
-        // Early exit if we have found enough features
-        if (num_sector_edge_features > params.max_edge_feats_per_sector) break;
-      }
+      // Search largest to smallest curvature [i.e. edge features] WARN: Mutates out_features + valid_mask
+      features_internal::extractSectorEdgeFeatures(sector_start_pt, sector_end_pt, input_scan, curvature, params,
+                                                   out_features, valid_mask);
+      // Search smallest to largest [i.e. planar features] WARN: Mutates out_features + valid_mask
+      features_internal::extractSectorPlanarFeatures(sector_start_pt, sector_end_pt, input_scan, curvature, params,
+                                                     out_features, valid_mask);
 
-      // Search smallest to largest [i.e. planar features]
-      for (size_t sorted_curv_idx = sector_start_point; sorted_curv_idx < sector_end_point; sorted_curv_idx++) {
-        const PointCurvature curv = curvature[sorted_curv_idx];
-        if (valid_mask[curv.index] && curv.curvature < params.planar_feat_threshold) {
-          result.planar_points.push_back(input_scan.at(curv.index));  // Add to edge points
-          for (size_t n = 0; n < params.neighbor_points; n++) {       // update mask
-            valid_mask[curv.index + n] = false;
-            valid_mask[curv.index - n] = false;
-          }
-          num_sector_planar_features++;
-        }
-        // Early exit if we have found enough features
-        if (num_sector_planar_features > params.max_planar_feats_per_sector) break;
-
-      }  // end feature search in sector
-    }    // end sector search
-  }      // end scan line search
-  return result;
+    }  // end sector search
+  }  // end scan line search
+  return out_features;
 }
 
 /*********************************************************************************************************************/
@@ -127,11 +100,7 @@ std::vector<bool> computeValidPoints(const std::vector<PointType>& input_scan, c
       const size_t idx = (scan_line_idx * lidar_params.points_per_line) + line_pt_idx;
 
       // CHECK 1: Due to edge effects, the first and last neighbor_points points of each scan line are invalid
-      if (line_pt_idx < params.neighbor_points ||
-          line_pt_idx >= lidar_params.points_per_line - params.neighbor_points) {
-        mask[idx] = false;
-        continue;
-      }
+      if (features_internal::markEdgesInvalid(idx, line_pt_idx, lidar_params, params, mask)) continue;
 
       // Get the current point and its two neighbors
       const PointType prev_point = input_scan.at(idx - 1);
@@ -144,33 +113,123 @@ std::vector<bool> computeValidPoints(const std::vector<PointType>& input_scan, c
       const double prev_point_range = pointRange<PointType, Accessor>(prev_point);
 
       // CHECK 2: Is the point in the valid range of the LiDAR
-      if (point_range < lidar_params.min_range || point_range > lidar_params.max_range) {
-        mask[idx] = false;
-        for (size_t n = 1; n <= params.neighbor_points; n++) {
-          mask[idx + n] = false;
-          mask[idx - n] = false;
-        }
-        continue;  // continue with loop
-      }
-
+      if (features_internal::markOutOfRangeInvalid(idx, point_range, lidar_params, params, mask)) continue;
       // CHECK 3: Occlusions
-      if (next_point_range - point_range > params.occlusion_thresh) {  // Case 1
-        for (size_t n = 1; n <= params.neighbor_points; n++) mask[idx + n] = false;
-        continue;
-      } else if (point_range - next_point_range > params.occlusion_thresh) {  // Case 2
-        for (size_t n = 0; n < params.neighbor_points; n++) mask[idx - n] = false;
-        continue;
-      }
-
-      // Check 4: Check if the point is on a plane nearly parallel to the LiDAR Beam
-      double diff_next = std::abs(prev_point_range - point_range);
-      double diff_prev = std::abs(next_point_range - point_range);
-      if (diff_next > params.parallel_thresh * point_range && diff_prev > params.parallel_thresh * point_range) {
-        mask[idx] = false;
-      }
-    }
-  }
+      if (features_internal::markOccludedInvalid(idx, point_range, next_point_range, params, mask)) continue;
+      // CHECK 4: Check if the point is on a plane nearly parallel to the LiDAR Beam (no continue b/c last )
+      features_internal::markParallelInvalid(idx, prev_point_range, point_range, next_point_range, params, mask);
+    }  // end line point search
+  }  // end scan line search
   return mask;
 }
+
+/**
+ * #### ##    ## ######## ######## ########  ##    ##    ###    ##
+ *  ##  ###   ##    ##    ##       ##     ## ###   ##   ## ##   ##
+ *  ##  ####  ##    ##    ##       ##     ## ####  ##  ##   ##  ##
+ *  ##  ## ## ##    ##    ######   ########  ## ## ## ##     ## ##
+ *  ##  ##  ####    ##    ##       ##   ##   ##  #### ######### ##
+ *  ##  ##   ###    ##    ##       ##    ##  ##   ### ##     ## ##
+ * #### ##    ##    ##    ######## ##     ## ##    ## ##     ## ########
+ */
+/*********************************************************************************************************************/
+namespace features_internal {
+template <typename PointType, template <typename> class Accessor = FieldAccessor>
+void extractSectorEdgeFeatures(const size_t& sector_start_point, const size_t& sector_end_point,
+                               const std::vector<PointType>& input_scan, const std::vector<PointCurvature>& curvature,
+                               const FeatureExtractionParams& params, LoamFeatures<PointType>& out_features,
+                               std::vector<bool>& valid_mask) {
+  size_t num_sector_edge_features = 0;
+  for (size_t sorted_curv_idx_p1 = sector_end_point; sorted_curv_idx_p1 > sector_start_point; sorted_curv_idx_p1--) {
+    const PointCurvature curv = curvature[sorted_curv_idx_p1 - 1];  // subtraction as loop cannot go negative
+
+    if (valid_mask[curv.index] && curv.curvature > params.edge_feat_threshold) {
+      out_features.edge_points.push_back(input_scan.at(curv.index));  // Add to edge points
+      for (size_t n = 0; n < params.neighbor_points; n++) {           // update mask
+        valid_mask[curv.index + n] = false;
+        valid_mask[curv.index - n] = false;
+      }
+      num_sector_edge_features++;
+    }
+    // Early exit if we have found enough features
+    if (num_sector_edge_features > params.max_edge_feats_per_sector) break;
+  }
+}
+
+/*********************************************************************************************************************/
+template <typename PointType, template <typename> class Accessor = FieldAccessor>
+void extractSectorPlanarFeatures(const size_t& sector_start_point, const size_t& sector_end_point,
+                                 const std::vector<PointType>& input_scan, const std::vector<PointCurvature>& curvature,
+                                 const FeatureExtractionParams& params, LoamFeatures<PointType>& out_features,
+                                 std::vector<bool>& valid_mask) {
+  size_t num_sector_planar_features = 0;
+  for (size_t sorted_curv_idx = sector_start_point; sorted_curv_idx < sector_end_point; sorted_curv_idx++) {
+    const PointCurvature curv = curvature[sorted_curv_idx];
+    if (valid_mask[curv.index] && curv.curvature < params.planar_feat_threshold) {
+      out_features.planar_points.push_back(input_scan.at(curv.index));  // Add to edge points
+      for (size_t n = 0; n < params.neighbor_points; n++) {             // update mask
+        valid_mask[curv.index + n] = false;
+        valid_mask[curv.index - n] = false;
+      }
+      num_sector_planar_features++;
+    }
+    // Early exit if we have found enough features
+    if (num_sector_planar_features > params.max_planar_feats_per_sector) break;
+
+  }  // end feature search in sector
+}
+
+/*********************************************************************************************************************/
+bool markEdgesInvalid(const size_t& idx, const size_t& line_pt_idx, const LidarParams& lidar_params,
+                      const FeatureExtractionParams& params, std::vector<bool>& mask) {
+  if (line_pt_idx < params.neighbor_points || line_pt_idx >= lidar_params.points_per_line - params.neighbor_points) {
+    mask[idx] = false;
+    return true;
+  }
+  return false;
+}
+
+/*********************************************************************************************************************/
+bool markOutOfRangeInvalid(const size_t& idx, const double& point_range, const LidarParams& lidar_params,
+                           const FeatureExtractionParams& params, std::vector<bool>& mask) {
+  if (point_range < lidar_params.min_range || point_range > lidar_params.max_range) {
+    mask[idx] = false;
+    for (size_t n = 1; n <= params.neighbor_points; n++) {
+      mask[idx + n] = false;
+      mask[idx - n] = false;
+    }
+    return true;
+  }
+  return false;
+}
+
+/*********************************************************************************************************************/
+bool markOccludedInvalid(const size_t& idx, const double& point_range, const double& next_point_range,
+                         const FeatureExtractionParams& params, std::vector<bool>& mask) {
+  if (next_point_range - point_range > params.occlusion_thresh) {  // Case 1
+    for (size_t n = 1; n <= params.neighbor_points; n++) mask[idx + n] = false;
+    return true;
+  } else if (point_range - next_point_range > params.occlusion_thresh) {  // Case 2
+    for (size_t n = 0; n < params.neighbor_points; n++) mask[idx - n] = false;
+    return true;
+  }
+  return false;
+}
+
+/*********************************************************************************************************************/
+bool markParallelInvalid(const size_t& idx, const double& prev_point_range, const double& point_range,
+                         const double& next_point_range, const FeatureExtractionParams& params,
+                         std::vector<bool>& mask) {
+  double diff_next = std::abs(prev_point_range - point_range);
+  double diff_prev = std::abs(next_point_range - point_range);
+  if (diff_next > params.parallel_thresh * point_range && diff_prev > params.parallel_thresh * point_range) {
+    mask[idx] = false;
+    return true;
+  }
+
+  return false;
+}
+
+}  // namespace features_internal
 
 }  // namespace loam

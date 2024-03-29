@@ -38,23 +38,25 @@ struct Pose3d {
   static Pose3d Identity() { return Pose3d(Eigen::Quaterniond::Identity(), Eigen::Vector3d::Zero()); }
 
   /// @brief Returns in inverse of the pose [P^{-1}]
-  Pose3d inverse() const {
-    Eigen::Quaterniond inv_rot = rotation.inverse();
-    return Pose3d(inv_rot, inv_rot * -translation);
-  }
-
+  Pose3d inverse() const;
   /// @brief Composes two poses [P \oplus other]
-  Pose3d compose(const Pose3d &other) const {
-    return Pose3d(rotation * other.rotation, translation + (rotation * other.translation));
-  }
-
+  Pose3d compose(const Pose3d &other) const;
   /// @brief A pose e_T_s acts on a point p_s according to [p_e = e_T_s * p_s]
-  Eigen::Vector3d act(const Eigen::Vector3d &p) const { return rotation * p + translation; }
+  Eigen::Vector3d act(const Eigen::Vector3d &p) const;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
-// TODO (dan) maybe move this to an internal namespace since it is only used in registraiton
+/**
+ * #### ##    ## ######## ######## ########  ##    ##    ###    ##
+ *  ##  ###   ##    ##    ##       ##     ## ###   ##   ## ##   ##
+ *  ##  ####  ##    ##    ##       ##     ## ####  ##  ##   ##  ##
+ *  ##  ## ## ##    ##    ######   ########  ## ## ## ##     ## ##
+ *  ##  ##  ####    ##    ##       ##   ##   ##  #### ######### ##
+ *  ##  ##   ###    ##    ##       ##    ##  ##   ### ##     ## ##
+ * #### ##    ##    ##    ######## ##     ## ##    ## ##     ## ########
+ */
+namespace geometry_internal {
 /** @brief A Line in 3D space.
  * We represent lines by two points on that line as it makes it easier when computing point-to-line distances.
  * These points cannot be the same, and for numeric stability should be reasonable far away >0.1
@@ -83,16 +85,6 @@ struct Plane {
   Plane(Eigen::Vector3d normal, double d) : normal(normal), d(d) {}
 };
 
-/**
- * #### ##    ## ######## ######## ########  ########    ###     ######  ########
- *  ##  ###   ##    ##    ##       ##     ## ##         ## ##   ##    ## ##
- *  ##  ####  ##    ##    ##       ##     ## ##        ##   ##  ##       ##
- *  ##  ## ## ##    ##    ######   ########  ######   ##     ## ##       ######
- *  ##  ##  ####    ##    ##       ##   ##   ##       ######### ##       ##
- *  ##  ##   ###    ##    ##       ##    ##  ##       ##     ## ##    ## ##
- * #### ##    ##    ##    ######## ##     ## ##       ##     ##  ######  ########
- */
-
 /** @brief Fits a line to a set of points
  * To do so we perform principal component analysis on the points.
  * First we normalize the points.
@@ -105,35 +97,13 @@ struct Plane {
  * @param points: Matrix of points in shape (K, 3) where K must be >= 2
  * @returns The line and the condition number
  */
-std::pair<Line, double> fitLine(Eigen::MatrixXd points) {
-  assert(points.rows >= 2 && points.cols == 3);
-  // Compute the mean of the points
-  Eigen::Vector3d center = points.colwise().mean();
-  // Normalize the points around the center
-  Eigen::MatrixXd centered_points = points.rowwise() - center.transpose();
-  // Run PCA on the line points
-  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> pca(centered_points.transpose() * centered_points);
-  // Get line direction
-  Eigen::Vector3d line_direction = pca.eigenvectors().col(2);
-  // Construct the Line
-  Line line(center + 0.1 * line_direction, center - 0.1 * line_direction);
-  // Compute the condition number being careful to avoid a division by zero
-  double condition_number = std::numeric_limits<double>::max();
-  if (pca.eigenvalues()(2) > 1e-12) pca.eigenvalues()(2) / pca.eigenvalues()(0);
+std::pair<Line, double> fitLine(Eigen::MatrixXd points);
 
-  return std::make_pair(line, condition_number);
-}
-
-/** @brief Computes the distance between a point and a line defined by two points(a and b)
- * Templated, and not using Line class to work with ceres and its autodiff functionality
- */
+///@brief Computes the distance between a point and a line defined by two points(a and b)
+/// Templated, and not using Line class to work with ceres and its autodiff functionality
 template <typename T>
 T pointToLineDistance(const Eigen::Matrix<T, 3, 1> &point, const Eigen::Matrix<T, 3, 1> &line_a,
-                      const Eigen::Matrix<T, 3, 1> &line_b) {
-  T numerator = ((point - line_a).cross(point - line_b)).norm();
-  T denominator = (line_a - line_b).norm();
-  return numerator / denominator;
-}
+                      const Eigen::Matrix<T, 3, 1> &line_b);
 
 /** @brief Fits a Plane to a set of points
  * We do so by solving a least squares problem of the form
@@ -148,25 +118,16 @@ T pointToLineDistance(const Eigen::Matrix<T, 3, 1> &point, const Eigen::Matrix<T
  * @param points: Matrix of points in shape (K, 3) where K must be >= 3
  * @returns The Plane and the average point distance
  */
-std::pair<Plane, double> fitPlane(Eigen::MatrixXd points) {
-  assert(points.rows() >= 3 && points.cols() == 3);
-  // Compose the ones vector
-  Eigen::VectorXd ones_vec = Eigen::VectorXd::Ones(points.rows());
-  // Solve the least squares problem
-  Eigen::Vector3d abc = points.colPivHouseholderQr().solve(ones_vec);
-  // Convert the abc parameterization to normal, d representation
-  Plane plane(abc / abc.norm(), 1.0 / abc.norm());
-  // Compute the average distance to the plane
-  double avg_dist = (points * plane.normal - (ones_vec * plane.d)).mean();
-  return std::make_pair(plane, avg_dist);
-}
+std::pair<Plane, double> fitPlane(Eigen::MatrixXd points);
 
-/** @brief Computes the distance between a point and a plane defined by a normal and a distance
- * Templated, and not using Plane class to work with ceres and its autodiff functionality
- */
+///@brief Computes the distance between a point and a plane defined by a normal and a distance
+/// Templated, and not using Plane class to work with ceres and its autodiff functionality
 template <typename T>
-T pointToPlaneDistance(const Eigen::Matrix<T, 3, 1> &point, const Eigen::Matrix<T, 3, 1> &normal, const T distance) {
-  return abs(normal.dot(point) - distance);
-}
+T pointToPlaneDistance(const Eigen::Matrix<T, 3, 1> &point, const Eigen::Matrix<T, 3, 1> &normal, const T distance);
+
+}  // namespace geometry_internal
 
 }  // namespace loam
+
+// Include the actual implementation
+#include "loam/geometry-inl.h"

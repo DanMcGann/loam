@@ -132,13 +132,13 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
                         std::shared_ptr<RegistrationDetail> detail = nullptr);
 
 /**
- * ##     ## ######## ##       ########  ######## ########   ######
- * ##     ## ##       ##       ##     ## ##       ##     ## ##    ##
- * ##     ## ##       ##       ##     ## ##       ##     ## ##
- * ######### ######   ##       ########  ######   ########   ######
- * ##     ## ##       ##       ##        ##       ##   ##         ##
- * ##     ## ##       ##       ##        ##       ##    ##  ##    ##
- * ##     ## ######## ######## ##        ######## ##     ##  ######
+ * #### ##    ## ######## ######## ########  ##    ##    ###    ##
+ *  ##  ###   ##    ##    ##       ##     ## ###   ##   ## ##   ##
+ *  ##  ####  ##    ##    ##       ##     ## ####  ##  ##   ##  ##
+ *  ##  ## ## ##    ##    ######   ########  ## ## ## ##     ## ##
+ *  ##  ##  ####    ##    ##       ##   ##   ##  #### ######### ##
+ *  ##  ##   ###    ##    ##       ##    ##  ##   ### ##     ## ##
+ * #### ##    ##    ##    ######## ##     ## ##    ## ##     ## ########
  */
 namespace registration_internal {
 
@@ -151,7 +151,7 @@ namespace registration_internal {
 std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& params,
                                                       const LoamFeatures<Eigen::Vector3d>& source_eig,
                                                       const LoamFeatures<Eigen::Vector3d>& target_eig,
-                                                      const KDTree& target_edge_kdtree,
+                                                      const kdtree_internal::KDTree& target_edge_kdtree,
                                                       const Pose3d& target_T_source_est, Pose3d& estimate_update,
                                                       ceres::Problem& problem);
 
@@ -164,7 +164,7 @@ std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& 
 std::vector<std::pair<size_t, size_t>> associatePlanes(const RegistrationParams& params,
                                                        const LoamFeatures<Eigen::Vector3d>& source_eig,
                                                        const LoamFeatures<Eigen::Vector3d>& target_eig,
-                                                       const KDTree& target_plane_kdtree,
+                                                       const kdtree_internal::KDTree& target_plane_kdtree,
                                                        const Pose3d& target_T_source_est, Pose3d& estimate_update,
                                                        ceres::Problem& problem);
 };  // namespace registration_internal

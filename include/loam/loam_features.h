@@ -5,8 +5,8 @@
  * Features are identified based on "curvature" [1] Eq.(1) accounting for unreliable edge cases like planes parallel to
  * the LiDAR beam and points bordering potentially occluded regions  [1] Fig. 4.
  *
- * Features are found independently in each scan line from the lidar. Thus LOAM is reliant of having a structured
- * pointcloud. Specifically the feature extraction module requires pointclouds to be in row major order.
+ * Features are found independently in each scan line from the LiDAR. Thus LOAM is reliant of having a structured
+ * pointcloud. Specifically, the feature extraction module requires pointclouds to be in row major order.
  * This is intended to help with caching as each scan-line is searched over and thus efficiency in the long run.
  *
  * [1] Ji Zhang and Sanjiv Singh, "LOAM: Lidar Odometry and Mapping in Real-time,"
@@ -112,7 +112,6 @@ LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan
  * @param input_scan: The LiDAR scan, organized in row-major order
  * @param lidar_params: The parameters for the lidar that observed input_scan
  * @tparam PointType Template for point type see README.md
- * @WARN Assumes that │S│ = 10 in Eq. (1) (i.e. search 5 points on either side)
  * @WARN To match the published LOAM implementation we do not normalize curvature
  */
 template <typename PointType, template <typename> class Accessor = FieldAccessor>
@@ -122,7 +121,7 @@ std::vector<PointCurvature> computeCurvature(const std::vector<PointType>& input
 /** @brief Computes all valid points in the LiDAR scan [1] Sec. V.A
  * A point can be deemed invalid for 4 reasons
  * 1. The point is at the edge of a scan line
- *    - These points have invalid curvature of 0 - see compute curvature
+ *    - These points have invalid curvature of (-1) - see compute curvature
  * 2. The point is outside the valid range of the lidar
  *    - These points also invalidate their neighbors as their neighbors curvature will be invalid
  * 3. The point is part of a probably occluded object: There are two cases for this
@@ -165,7 +164,23 @@ template <typename PointType, template <typename> class Accessor = FieldAccessor
 std::vector<bool> computeValidPoints(const std::vector<PointType>& input_scan, const LidarParams& lidar_params,
                                      const FeatureExtractionParams& params = FeatureExtractionParams());
 
-/// @brief Converts Loam Features to Eigen [used in registration for efficiency]
+/**
+ * #### ##    ## ######## ######## ########  ##    ##    ###    ##
+ *  ##  ###   ##    ##    ##       ##     ## ###   ##   ## ##   ##
+ *  ##  ####  ##    ##    ##       ##     ## ####  ##  ##   ##  ##
+ *  ##  ## ## ##    ##    ######   ########  ## ## ## ##     ## ##
+ *  ##  ##  ####    ##    ##       ##   ##   ##  #### ######### ##
+ *  ##  ##   ###    ##    ##       ##    ##  ##   ### ##     ## ##
+ * #### ##    ##    ##    ######## ##     ## ##    ## ##     ## ########
+ */
+
+namespace features_internal {
+
+/** @brief Converts features of PointType to the same features as Eigen::Vector3d type
+ * This is necessary during registration to avoid repeated conversions of points
+ * @param in_features: The features to convert
+ * @returns in_features with all points converted to eigen vectors
+ */
 template <typename PointType, template <typename> class Accessor = FieldAccessor>
 LoamFeatures<Eigen::Vector3d> featuresToEigen(const LoamFeatures<PointType>& in_features) {
   LoamFeatures<Eigen::Vector3d> result;
@@ -177,6 +192,66 @@ LoamFeatures<Eigen::Vector3d> featuresToEigen(const LoamFeatures<PointType>& in_
   }
   return result;
 }
+
+/** @brief Extracts edge features and updates the mask for a scanline sector defined by [sector_start, sector_end]
+ * This is used internally in feature extraction, requires that curvature is sorted in range [sector_start, sector_end]
+ * WARN: Mutates out_features adding the newly detected features
+ * WARN: Mutates valid_mask marking neighbors of found features invalid
+ * All param names match the local variable names in extractFeatures
+ */
+template <typename PointType, template <typename> class Accessor = FieldAccessor>
+void extractSectorEdgeFeatures(const size_t& sector_start_point, const size_t& sector_end_point,
+                               const std::vector<PointType>& input_scan, const std::vector<PointCurvature>& curvature,
+                               const FeatureExtractionParams& params, LoamFeatures<PointType>& out_features,
+                               std::vector<bool>& valid_mask);
+
+/** @brief Extracts planar features and updates the mask for a scanline sector defined by [sector_start, sector_end]
+ * This is used internally in feature extraction, requires that curvature is sorted in range [sector_start, sector_end]
+ * WARN: Mutates out_features adding the newly detected features
+ * WARN: Mutates valid_mask marking neighbors of found features invalid
+ *
+ * All param names match the local variable names in extractFeatures
+ */
+template <typename PointType, template <typename> class Accessor = FieldAccessor>
+void extractSectorPlanarFeatures(const size_t& sector_start_point, const size_t& sector_end_point,
+                                 const std::vector<PointType>& input_scan, const std::vector<PointCurvature>& curvature,
+                                 const FeatureExtractionParams& params, LoamFeatures<PointType>& out_features,
+                                 std::vector<bool>& valid_mask);
+
+/** @brief Marks edge points as invalid (see computeValidPoints) returns true if the point is marked
+ * WARN: Potentially mutates mask if the point is invalid
+ * All param names match the local variable names in computeValidPoints
+ * @returns true if the point was marked invalid in the mask
+ */
+bool markEdgesInvalid(const size_t& idx, const size_t& line_pt_idx, const LidarParams& lidar_params,
+                      const FeatureExtractionParams& params, std::vector<bool>& mask);
+
+/** @brief Marks out of range points as invalid (see computeValidPoints) returns true if the point is marked
+ * WARN: Potentially mutates mask if the point is invalid
+ * All param names match the local variable names in computeValidPoints
+ * @returns true if the point was marked invalid in the mask
+ */
+bool markOutOfRangeInvalid(const size_t& idx, const double& point_range, const LidarParams& lidar_params,
+                           const FeatureExtractionParams& params, std::vector<bool>& mask);
+
+/** @brief Marks occluded points as invalid (see computeValidPoints) returns true if the point is marked
+ * WARN: Potentially mutates mask if the point is invalid
+ * All param names match the local variable names in computeValidPoints
+ * @returns true if the point was marked invalid in the mask
+ */
+bool markOccludedInvalid(const size_t& idx, const double& point_range, const double& next_point_range,
+                         const FeatureExtractionParams& params, std::vector<bool>& mask);
+
+/** @brief Marks occluded points as invalid (see computeValidPoints) returns true if the point is marked
+ * WARN: Potentially mutates mask if the point is invalid
+ * All param names match the local variable names in computeValidPoints
+ * @returns true if the point was marked invalid in the mask
+ */
+bool markParallelInvalid(const size_t& idx, const double& prev_point_range, const double& point_range,
+                         const double& next_point_range, const FeatureExtractionParams& params,
+                         std::vector<bool>& mask);
+
+}  // namespace features_internal
 
 }  // namespace loam
 

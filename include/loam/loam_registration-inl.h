@@ -14,14 +14,14 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
                         const Pose3d& target_T_source_init, const RegistrationParams& params,
                         std::shared_ptr<RegistrationDetail> detail) {
   // Convert features to eigen once here to avoid repeated conversions later
-  LoamFeatures<Eigen::Vector3d> source_eig = featuresToEigen<PointType, Accessor>(source);
-  LoamFeatures<Eigen::Vector3d> target_eig = featuresToEigen<PointType, Accessor>(target);
+  LoamFeatures<Eigen::Vector3d> source_eig = features_internal::featuresToEigen<PointType, Accessor>(source);
+  LoamFeatures<Eigen::Vector3d> target_eig = features_internal::featuresToEigen<PointType, Accessor>(target);
 
   // Compute a KDtree for the target features: 20 leaf nodes is approx optimal given nanoflann's documentation
-  KDTreeDataAdaptor target_edge_adaptor(target_eig.edge_points);
-  KDTree target_edge_kdtree(3, target_edge_adaptor, KDTreeParams(20));
-  KDTreeDataAdaptor target_plane_adaptor(target_eig.planar_points);
-  KDTree target_plane_kdtree(3, target_plane_adaptor, KDTreeParams(20));
+  kdtree_internal::KDTreeDataAdaptor target_edge_adaptor(target_eig.edge_points);
+  kdtree_internal::KDTree target_edge_kdtree(3, target_edge_adaptor, kdtree_internal::KDTreeParams(20));
+  kdtree_internal::KDTreeDataAdaptor target_plane_adaptor(target_eig.planar_points);
+  kdtree_internal::KDTree target_plane_kdtree(3, target_plane_adaptor, kdtree_internal::KDTreeParams(20));
 
   // Setup the parameters of the optimization (the relative pose)
   Pose3d target_T_source_est(target_T_source_init);
@@ -76,20 +76,20 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
 }
 
 /**
- * ##     ## ######## ##       ########  ######## ########   ######
- * ##     ## ##       ##       ##     ## ##       ##     ## ##    ##
- * ##     ## ##       ##       ##     ## ##       ##     ## ##
- * ######### ######   ##       ########  ######   ########   ######
- * ##     ## ##       ##       ##        ##       ##   ##         ##
- * ##     ## ##       ##       ##        ##       ##    ##  ##    ##
- * ##     ## ######## ######## ##        ######## ##     ##  ######
+ * #### ##    ## ######## ######## ########  ##    ##    ###    ##
+ *  ##  ###   ##    ##    ##       ##     ## ###   ##   ## ##   ##
+ *  ##  ####  ##    ##    ##       ##     ## ####  ##  ##   ##  ##
+ *  ##  ## ## ##    ##    ######   ########  ## ## ## ##     ## ##
+ *  ##  ##  ####    ##    ##       ##   ##   ##  #### ######### ##
+ *  ##  ##   ###    ##    ##       ##    ##  ##   ### ##     ## ##
+ * #### ##    ##    ##    ######## ##     ## ##    ## ##     ## ########
  */
 /*********************************************************************************************************************/
 namespace registration_internal {
 std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& params,
                                                       const LoamFeatures<Eigen::Vector3d>& source_eig,
                                                       const LoamFeatures<Eigen::Vector3d>& target_eig,
-                                                      const KDTree& target_edge_kdtree,
+                                                      const kdtree_internal::KDTree& target_edge_kdtree,
                                                       const Pose3d& target_T_source_est, Pose3d& estimate_update,
                                                       ceres::Problem& problem) {
   std::vector<std::pair<size_t, size_t>> edge_associations;
@@ -100,8 +100,8 @@ std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& 
     const Eigen::Vector3d point_tgt = target_T_source_est.act(source_eig.edge_points.at(source_idx));
 
     // Associate the query point with target points
-    std::vector<size_t> neighbor_edge_idxes =
-        knnSearch(target_edge_kdtree, point_tgt, params.num_edge_neighbors, params.max_edge_neighbor_dist);
+    std::vector<size_t> neighbor_edge_idxes = kdtree_internal::knnSearch(
+        target_edge_kdtree, point_tgt, params.num_edge_neighbors, params.max_edge_neighbor_dist);
     if (neighbor_edge_idxes.size() < params.min_line_fit_points) continue;  // GUARD: Insufficient Matches
 
     // Accumulate the points into a matrix
@@ -111,7 +111,7 @@ std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& 
     }
 
     // Fit the Line to these points
-    auto [line, condition_number] = fitLine(neighbor_edge_points);
+    auto [line, condition_number] = geometry_internal::fitLine(neighbor_edge_points);
     if (condition_number < params.min_line_condition_number) continue;  // GUARD: Edge points not co-linear
 
     // Construct the cost function and add it to the problem
@@ -127,7 +127,7 @@ std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& 
 std::vector<std::pair<size_t, size_t>> associatePlanes(const RegistrationParams& params,
                                                        const LoamFeatures<Eigen::Vector3d>& source_eig,
                                                        const LoamFeatures<Eigen::Vector3d>& target_eig,
-                                                       const KDTree& target_plane_kdtree,
+                                                       const kdtree_internal::KDTree& target_plane_kdtree,
                                                        const Pose3d& target_T_source_est, Pose3d& estimate_update,
                                                        ceres::Problem& problem) {
   std::vector<std::pair<size_t, size_t>> plane_associations;
@@ -137,8 +137,8 @@ std::vector<std::pair<size_t, size_t>> associatePlanes(const RegistrationParams&
     const Eigen::Vector3d point_tgt = target_T_source_est.act(source_eig.planar_points.at(source_idx));
 
     // Associate the query point with target points
-    std::vector<size_t> neighbor_plane_idxes =
-        knnSearch(target_plane_kdtree, point_tgt, params.num_plane_neighbors, params.max_plane_neighbor_dist);
+    std::vector<size_t> neighbor_plane_idxes = kdtree_internal::knnSearch(
+        target_plane_kdtree, point_tgt, params.num_plane_neighbors, params.max_plane_neighbor_dist);
     if (neighbor_plane_idxes.size() < params.min_plane_fit_points) continue;  // GUARD: Insufficient Matches
 
     // Accumulate the points into a matrix
@@ -148,7 +148,7 @@ std::vector<std::pair<size_t, size_t>> associatePlanes(const RegistrationParams&
     }
 
     // Fit the Plane to these points
-    auto [plane, avg_dist] = fitPlane(neighbor_plane_points);
+    auto [plane, avg_dist] = geometry_internal::fitPlane(neighbor_plane_points);
     if (avg_dist > params.max_avg_point_plane_dist) continue;  // GUARD: Plane points not co-planar
 
     // Construct the cost function and add it to the problem

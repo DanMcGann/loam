@@ -35,8 +35,9 @@ TEST(TestLoamFeatureExtraction, TestCurvaturePlane) {
     pcd.push_back(Point(i, 1, 0.0));
   }
   LidarParams lidar_params(/* scan_lines */ 1, /* pts/line */ 11, /* min range */ 0.1, /* max range */ 10);
+  FeatureExtractionParams params{5, 6, 5, 5, 100, 0.1, 0.25, 0.02};
 
-  auto curv = computeCurvature<Point>(pcd, lidar_params);
+  auto curv = computeCurvature<Point>(pcd, lidar_params, params);
 
   // Ensure we computed curvature for all points
   ASSERT_EQ(curv.size(), 11);
@@ -65,8 +66,9 @@ TEST(TestLoamFeatureExtraction, TestCurvatureCorner) {
     pcd.push_back(Point(i, abs(i) + 1, 0.0));
   }
   LidarParams lidar_params(/* scan_lines */ 1, /* pts/line */ 11, /* min range */ 0.1, /* max range */ 50);
+  FeatureExtractionParams params{5, 6, 5, 5, 100, 0.1, 0.25, 0.02};
 
-  std::vector<PointCurvature> curv = computeCurvature<Point>(pcd, lidar_params);
+  std::vector<PointCurvature> curv = computeCurvature<Point>(pcd, lidar_params, params);
 
   // Ensure we computed curvature for all points
   ASSERT_EQ(curv.size(), 11);
@@ -102,8 +104,9 @@ TEST(TestValidPoints, TestInvalidEdges) {
     pcd.push_back(Point(i * 0.1, 1, 0.0));
   }
   LidarParams lidar_params(/* scan_lines */ 1, /* pts/line */ 11, /* min range */ 0.1, /* max range */ 50);
+  FeatureExtractionParams params{5, 6, 5, 5, 100, 0.1, 0.25, 0.02};
 
-  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params);
+  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params, params);
 
   // Ensure we computed mask for all points
   ASSERT_EQ(valid_mask.size(), 11);
@@ -133,8 +136,9 @@ TEST(TestValidPoints, TestInvalidRanges) {
   for (int i = 1; i <= 5; i++) pcd.push_back(Point(i, 1, 0.0));
 
   LidarParams lidar_params(/* scan_lines */ 1, /* pts/line */ 12, /* min range */ 0.5, /* max range */ 6.0);
+  FeatureExtractionParams params{5, 6, 5, 5, 100, 0.1, 0.25, 0.02};
 
-  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params);
+  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params, params);
 
   // Ensure we computed mask for all points
   ASSERT_EQ(valid_mask.size(), 12);
@@ -163,8 +167,9 @@ TEST(TestValidPoints, TestOcclusionCase1) {
   for (int i = 0; i < 15; i++) pcd.push_back(Point(i * 0.1, 6.0, 0.0));
 
   LidarParams lidar_params(/* scan_lines */ 1, /* pts/line */ 30, /* min range */ 0.1, /* max range */ 100);
+  FeatureExtractionParams params{5, 6, 5, 5, 100, 0.1, 0.25, 0.02};
 
-  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params);
+  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params, params);
 
   // Ensure we computed mask for all points
   ASSERT_EQ(valid_mask.size(), 30);
@@ -197,8 +202,9 @@ TEST(TestValidPoints, TestOcclusionCase2) {
   for (int i = 0; i < 15; i++) pcd.push_back(Point(i * 0.1, 4.0, 0.0));
 
   LidarParams lidar_params(/* scan_lines */ 1, /* pts/line */ 30, /* min range */ 0.1, /* max range */ 100);
+  FeatureExtractionParams params{5, 6, 5, 5, 100, 0.1, 0.25, 0.02};
 
-  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params);
+  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params, params);
 
   // Ensure we computed mask for all points
   ASSERT_EQ(valid_mask.size(), 30);
@@ -232,8 +238,9 @@ TEST(TestValidPoints, TestParallelPlaneCase1) {
   for (int i = 1; i <= 15; i++) pcd.push_back(Point(i * 0.1, 2.1, 0.0));
 
   LidarParams lidar_params(/* scan_lines */ 1, /* pts/line */ 31, /* min range */ 0.1, /* max range */ 100);
+  FeatureExtractionParams params{5, 6, 5, 5, 100, 0.1, 0.25, 0.02};
 
-  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params);
+  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params, params);
 
   // Ensure we computed mask for all points
   ASSERT_EQ(valid_mask.size(), 31);
@@ -268,8 +275,9 @@ TEST(TestValidPoints, TestParallelPlaneCase2) {
   for (int i = 1; i <= 15; i++) pcd.push_back(Point(i * 0.1, 2.0, 0.0));
 
   LidarParams lidar_params(/* scan_lines */ 1, /* pts/line */ 31, /* min range */ 0.1, /* max range */ 100);
+  FeatureExtractionParams params{5, 6, 5, 5, 100, 0.1, 0.25, 0.02};
 
-  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params);
+  std::vector<bool> valid_mask = computeValidPoints<Point>(pcd, lidar_params, params);
 
   // Ensure we computed mask for all points
   ASSERT_EQ(valid_mask.size(), 31);

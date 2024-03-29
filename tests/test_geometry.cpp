@@ -79,7 +79,7 @@ TEST(TestDistances, TestPoint2Line) {
   for (double x = -5; x < 5; x += 0.5) {
     for (double y = -5; y < 5; y += 0.5) {
       Eigen::Vector3d p(x, y, x + y);
-      EXPECT_NEAR(pointToLineDistance(p, la, lb), sqrt(x * x + y * y), 1e-8);
+      EXPECT_NEAR(geometry_internal::pointToLineDistance(p, la, lb), sqrt(x * x + y * y), 1e-8);
     }
   }
 }
@@ -92,7 +92,7 @@ TEST(TestDistances, TestPoint2Plane) {
   for (double x = -5; x < 5; x += 0.5) {
     for (double y = -5; y < 5; y += 0.5) {
       Eigen::Vector3d p(x, y, x + y);
-      EXPECT_NEAR(pointToPlaneDistance(p, normal, distance), abs(x - 2.25), 1e-8);
+      EXPECT_NEAR(geometry_internal::pointToPlaneDistance(p, normal, distance), abs(x - 2.25), 1e-8);
     }
   }
 }

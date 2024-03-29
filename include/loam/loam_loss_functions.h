@@ -22,7 +22,7 @@ class EdgeCostFunction {
   /// @brief The edge point in the source frame
   const Eigen::Vector3d source_pt_;
   /// @brief The line the source point is matched to in the target frame, represented as two points
-  const Line line_;
+  const geometry_internal::Line line_;
 
   /** Interface */
  public:
@@ -31,7 +31,7 @@ class EdgeCostFunction {
    * @param tgt_line_1: The first point defining the line in the target frame
    * @param tgt_line_2: The second point defining the line in the target frame
    **/
-  EdgeCostFunction(Eigen::Vector3d source_pt, Line line) : source_pt_(source_pt), line_(line) {}
+  EdgeCostFunction(Eigen::Vector3d source_pt, geometry_internal::Line line) : source_pt_(source_pt), line_(line) {}
 
   /** @brief Computes the loss as the point-to-line distance
    * @param t_R_s_ptr: The current relative rotation solution target_R_source
@@ -47,12 +47,12 @@ class EdgeCostFunction {
     const Eigen::Matrix<T, 3, 1> target_pt_ = t_R_s * source_pt_.cast<T>() + t_p_s;
 
     // Compute the loss
-    residuals_ptr[0] = pointToLineDistance<T>(target_pt_, line_.a.cast<T>(), line_.b.cast<T>());
+    residuals_ptr[0] = geometry_internal::pointToLineDistance<T>(target_pt_, line_.a.cast<T>(), line_.b.cast<T>());
     return true;
   }
 
   /// @brief Helper to return the cost function as a ceres auto diff cost function
-  static ceres::CostFunction* Create(Eigen::Vector3d source_pt, Line line) {
+  static ceres::CostFunction* Create(Eigen::Vector3d source_pt, geometry_internal::Line line) {
     return new ceres::AutoDiffCostFunction<EdgeCostFunction, 1, 4, 3>(new EdgeCostFunction(source_pt, line));
   }
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -65,7 +65,7 @@ class PlaneCostFunction {
   /// @brief The planar point in the source frame
   const Eigen::Matrix<double, 3, 1> source_pt_;
   /// @brief The plane the source point has been matched to
-  const Plane plane_;
+  const geometry_internal::Plane plane_;
 
   /** Interface */
  public:
@@ -74,8 +74,7 @@ class PlaneCostFunction {
    * @param origin: The origin of the plane in the target frame
    * @param normal: The normal of the plan in the target frame
    **/
-  PlaneCostFunction(Eigen::Vector3d source_pt, Plane plane)
-      : source_pt_(source_pt), plane_(plane) {}
+  PlaneCostFunction(Eigen::Vector3d source_pt, geometry_internal::Plane plane) : source_pt_(source_pt), plane_(plane) {}
 
   /** @brief Computes the loss as the point-to-plane distance
    * @param t_R_s_ptr: The current relative rotation solution target_R_source
@@ -91,12 +90,12 @@ class PlaneCostFunction {
     const Eigen::Matrix<T, 3, 1> target_pt_ = t_R_s * source_pt_.cast<T>() + t_p_s;
 
     // Compute the loss
-    residuals_ptr[0] = pointToPlaneDistance<T>(target_pt_, plane_.normal.cast<T>(), T(plane_.d));
+    residuals_ptr[0] = geometry_internal::pointToPlaneDistance<T>(target_pt_, plane_.normal.cast<T>(), T(plane_.d));
     return true;
   }
 
   /// @brief Helper to return the cost function as a ceres auto diff cost function
-  static ceres::CostFunction* Create(Eigen::Vector3d source_pt, Plane plane) {
+  static ceres::CostFunction* Create(Eigen::Vector3d source_pt, geometry_internal::Plane plane) {
     return new ceres::AutoDiffCostFunction<PlaneCostFunction, 1, 4, 3>(new PlaneCostFunction(source_pt, plane));
   }
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
