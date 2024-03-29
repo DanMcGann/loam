@@ -21,11 +21,10 @@
 #include <Eigen/Dense>
 #include <nanoflann.hpp>
 
-#include "loam/geometry.h"
-#include "loam/kdtree.h"
 #include "loam/common.h"
 #include "loam/features.h"
-#include "loam/loss_functions.h"
+#include "loam/geometry.h"
+#include "loam/kdtree.h"
 
 namespace loam {
 
@@ -141,6 +140,72 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
  * #### ##    ##    ##    ######## ##     ## ##    ## ##     ## ########
  */
 namespace registration_internal {
+
+/// @brief Defines the cost function between a point and a line [1] Eq.(2) using ceres autodiff
+class EdgeCostFunction {
+  /** FIELDS */
+ private:
+  /// @brief The edge point in the source frame
+  const Eigen::Vector3d source_pt_;
+  /// @brief The line the source point is matched to in the target frame, represented as two points
+  const geometry_internal::Line line_;
+
+  /** Interface */
+ public:
+  /** @brief Constructor
+   * @param source_pt: The point in the source frame matched with the line
+   * @param tgt_line_1: The first point defining the line in the target frame
+   * @param tgt_line_2: The second point defining the line in the target frame
+   **/
+  EdgeCostFunction(Eigen::Vector3d source_pt, geometry_internal::Line line) : source_pt_(source_pt), line_(line) {}
+
+  /** @brief Computes the loss as the point-to-line distance
+   * @param t_R_s_ptr: The current relative rotation solution target_R_source
+   * @param t_p_s_ptr: The current relative position solution target_p_source
+   * @param residuals_ptr: Container for the error of this loss
+   */
+  template <typename T>
+  bool operator()(const T* const t_R_s_ptr, const T* const t_p_s_ptr, T* residuals_ptr) const;
+
+  /// @brief Helper to return the cost function as a ceres auto diff cost function
+  static ceres::CostFunction* Create(Eigen::Vector3d source_pt, geometry_internal::Line line) {
+    return new ceres::AutoDiffCostFunction<EdgeCostFunction, 1, 4, 3>(new EdgeCostFunction(source_pt, line));
+  }
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+/// @brief Defines the cost function between a point and a plane. NOTE: we do not use [1] Eq.(2)
+class PlaneCostFunction {
+  /** FIELDS */
+ private:
+  /// @brief The planar point in the source frame
+  const Eigen::Matrix<double, 3, 1> source_pt_;
+  /// @brief The plane the source point has been matched to
+  const geometry_internal::Plane plane_;
+
+  /** Interface */
+ public:
+  /** @brief Constructor
+   * @param source_pt: The point in the source frame matched with the plane
+   * @param origin: The origin of the plane in the target frame
+   * @param normal: The normal of the plan in the target frame
+   **/
+  PlaneCostFunction(Eigen::Vector3d source_pt, geometry_internal::Plane plane) : source_pt_(source_pt), plane_(plane) {}
+
+  /** @brief Computes the loss as the point-to-plane distance
+   * @param t_R_s_ptr: The current relative rotation solution target_R_source
+   * @param t_p_s_ptr: The current relative position solution target_p_source
+   * @param residuals_ptr: Container for the error of this loss
+   */
+  template <typename T>
+  bool operator()(const T* const t_R_s_ptr, const T* const t_p_s_ptr, T* residuals_ptr) const;
+
+  /// @brief Helper to return the cost function as a ceres auto diff cost function
+  static ceres::CostFunction* Create(Eigen::Vector3d source_pt, geometry_internal::Plane plane) {
+    return new ceres::AutoDiffCostFunction<PlaneCostFunction, 1, 4, 3>(new PlaneCostFunction(source_pt, plane));
+  }
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
 
 /** @brief Computes associations between edge points in source and edges in target, validates the associations, and adds
  * the appropriate cost function to the ceres problem.

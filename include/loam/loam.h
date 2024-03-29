@@ -8,5 +8,4 @@
 #include "loam/kdtree.h"
 #include "loam/common.h"
 #include "loam/features.h"
-#include "loam/loss_functions.h"
 #include "loam/registration.h"

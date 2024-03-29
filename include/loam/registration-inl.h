@@ -51,6 +51,7 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_QR;
     options.max_num_iterations = 4;
+    // options.minimizer_progress_to_stdout = true;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
@@ -86,6 +87,35 @@ Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeature
  */
 /*********************************************************************************************************************/
 namespace registration_internal {
+
+template <typename T>
+bool EdgeCostFunction::operator()(const T* const t_R_s_ptr, const T* const t_p_s_ptr, T* residuals_ptr) const {
+  Eigen::Map<const Eigen::Quaternion<T>> t_R_s(t_R_s_ptr);
+  Eigen::Map<const Eigen::Matrix<T, 3, 1>> t_p_s(t_p_s_ptr);
+
+  // Transform the source point into the target frame given the current estimate
+  const Eigen::Matrix<T, 3, 1> target_pt_ = t_R_s * source_pt_.cast<T>() + t_p_s;
+
+  // Compute the loss
+  residuals_ptr[0] = geometry_internal::pointToLineDistance<T>(target_pt_, line_.a.cast<T>(), line_.b.cast<T>());
+  return true;
+}
+
+/*********************************************************************************************************************/
+template <typename T>
+bool PlaneCostFunction::operator()(const T* const t_R_s_ptr, const T* const t_p_s_ptr, T* residuals_ptr) const {
+  Eigen::Map<const Eigen::Quaternion<T>> t_R_s(t_R_s_ptr);
+  Eigen::Map<const Eigen::Matrix<T, 3, 1>> t_p_s(t_p_s_ptr);
+
+  // Transform the source point into the target frame given the current estimate
+  const Eigen::Matrix<T, 3, 1> target_pt_ = t_R_s * source_pt_.cast<T>() + t_p_s;
+
+  // Compute the loss
+  residuals_ptr[0] = geometry_internal::pointToPlaneDistance<T>(target_pt_, plane_.normal.cast<T>(), T(plane_.d));
+  return true;
+}
+
+/*********************************************************************************************************************/
 std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& params,
                                                       const LoamFeatures<Eigen::Vector3d>& source_eig,
                                                       const LoamFeatures<Eigen::Vector3d>& target_eig,

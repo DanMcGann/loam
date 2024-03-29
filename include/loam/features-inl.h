@@ -35,7 +35,7 @@ LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan
                                        ? ((scan_line_idx + 1) * lidar_params.points_per_line)
                                        : sector_start_pt + points_per_sector;
 
-      // Sort the points based on curvature
+      // Sort the points within the sector based on curvature
       std::sort(curvature.begin() + sector_start_pt, curvature.begin() + sector_end_pt, curvatureComparator);
 
       // Search largest to smallest curvature [i.e. edge features] WARN: Mutates out_features + valid_mask
@@ -57,6 +57,7 @@ std::vector<PointCurvature> computeCurvature(const std::vector<PointType>& input
   validateLidarScan(input_scan, lidar_params);
   // Allocate vector (with zeros) to store curvature
   std::vector<PointCurvature> curvature;
+  curvature.reserve(input_scan.size());
 
   // Structured search (search over each scan line individually over all points [except points on scan line ends]
   for (size_t scan_line_idx = 0; scan_line_idx < lidar_params.scan_lines; scan_line_idx++) {
