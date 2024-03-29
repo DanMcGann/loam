@@ -82,13 +82,13 @@ PYBIND11_MODULE(loam_python, m) {
       .def_readwrite("edge_points", &loam::LoamFeatures<py::array_t<double>>::edge_points)
       .def_readwrite("planar_points", &loam::LoamFeatures<py::array_t<double>>::planar_points);
 
-  m.def("extractFeatures", &loam::extractFeatures<py::array_t<double>, loam::AtAccessor>,  //
+  m.def("extractFeatures", &loam::extractFeatures<loam::AtAccessor, py::array_t<double>, std::allocator>,
         py::arg("input_scan"), py::arg("lidar_params"), py::arg("params") = loam::FeatureExtractionParams());
 
-  m.def("computeCurvature", &loam::computeCurvature<py::array_t<double>, loam::AtAccessor>,  //
+  m.def("computeCurvature", &loam::computeCurvature<loam::AtAccessor, py::array_t<double>, std::allocator>,  //
         py::arg("input_scan"), py::arg("lidar_params"), py::arg("params") = loam::FeatureExtractionParams());
 
-  m.def("computeValidPoints", &loam::computeValidPoints<py::array_t<double>, loam::AtAccessor>,  //
+  m.def("computeValidPoints", &loam::computeValidPoints<loam::AtAccessor, py::array_t<double>, std::allocator>,  //
         py::arg("input_scan"), py::arg("lidar_params"), py::arg("params") = loam::FeatureExtractionParams());
 
   /**
@@ -138,7 +138,7 @@ PYBIND11_MODULE(loam_python, m) {
       .def_readwrite("iteration_info", &loam::RegistrationDetail::iteration_info)
       .def_readwrite("termination_type", &loam::RegistrationDetail::termination_type);
 
-  m.def("registerFeatures", &loam::registerFeatures<py::array_t<double>, loam::AtAccessor>,  //
+  m.def("registerFeatures", &loam::registerFeatures<loam::AtAccessor, py::array_t<double>, std::allocator>,  //
         py::arg("source"), py::arg("target"), py::arg("target_T_source_init"),
         py::arg("params") = loam::RegistrationParams(),
         py::arg("detail") = std::shared_ptr<loam::RegistrationDetail>());

@@ -9,13 +9,13 @@
 namespace loam {
 
 /*********************************************************************************************************************/
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeatures<PointType>& target,
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+Pose3d registerFeatures(const LoamFeatures<PointType, Alloc>& source, const LoamFeatures<PointType, Alloc>& target,
                         const Pose3d& target_T_source_init, const RegistrationParams& params,
                         std::shared_ptr<RegistrationDetail> detail) {
   // Convert features to eigen once here to avoid repeated conversions later
-  LoamFeatures<Eigen::Vector3d> source_eig = features_internal::featuresToEigen<PointType, Accessor>(source);
-  LoamFeatures<Eigen::Vector3d> target_eig = features_internal::featuresToEigen<PointType, Accessor>(target);
+  LoamFeatures<Eigen::Vector3d> source_eig = features_internal::featuresToEigen<Accessor>(source);
+  LoamFeatures<Eigen::Vector3d> target_eig = features_internal::featuresToEigen<Accessor>(target);
 
   // Compute a KDtree for the target features: 20 leaf nodes is approx optimal given nanoflann's documentation
   kdtree_internal::KDTreeDataAdaptor target_edge_adaptor(target_eig.edge_points);

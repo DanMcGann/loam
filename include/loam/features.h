@@ -16,6 +16,7 @@
  * @date Mar 2024
  */
 #pragma once
+#include <memory>
 #include <vector>
 
 #include "loam/common.h"
@@ -66,12 +67,12 @@ struct FeatureExtractionParams {
 
 /// @brief Structure for storing edge and planar feature points from a scan together
 /// @tparam PointType Template for point type see README.md
-template <typename PointType>
+template <typename PointType, template <typename> class Alloc = std::allocator>
 struct LoamFeatures {
   /// @brief A pointcloud of edge feature points
-  std::vector<PointType> edge_points;
+  std::vector<PointType, Alloc<PointType>> edge_points;
   /// @brief A pointcloud of planar feature points
-  std::vector<PointType> planar_points;
+  std::vector<PointType, Alloc<PointType>> planar_points;
 };
 
 /// @brief Structure for storing curvature information for points
@@ -104,9 +105,10 @@ bool curvatureComparator(const PointCurvature& lhs, const PointCurvature& rhs) {
  * @param lidar_params: The parameters for the lidar that observed input_scan
  * @tparam PointType Template for point type see README.md
  */
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan, const LidarParams& lidar_params,
-                                        const FeatureExtractionParams& params = FeatureExtractionParams());
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+LoamFeatures<PointType, Alloc> extractFeatures(const std::vector<PointType, Alloc<PointType>>& input_scan,
+                                               const LidarParams& lidar_params,
+                                               const FeatureExtractionParams& params = FeatureExtractionParams());
 
 /** @brief Computes the curvature [1] Eq. (1) of each point in the given LiDAR scan
  * @param input_scan: The LiDAR scan, organized in row-major order
@@ -114,8 +116,9 @@ LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan
  * @tparam PointType Template for point type see README.md
  * @WARN To match the published LOAM implementation we do not normalize curvature
  */
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-std::vector<PointCurvature> computeCurvature(const std::vector<PointType>& input_scan, const LidarParams& lidar_params,
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+std::vector<PointCurvature> computeCurvature(const std::vector<PointType, Alloc<PointType>>& input_scan,
+                                             const LidarParams& lidar_params,
                                              const FeatureExtractionParams& params = FeatureExtractionParams());
 
 /** @brief Computes all valid points in the LiDAR scan [1] Sec. V.A
@@ -160,8 +163,9 @@ std::vector<PointCurvature> computeCurvature(const std::vector<PointType>& input
  * @param lidar_params: The parameters for the lidar that observed input_scan
  * @tparam PointType Template for point type see README.md
  */
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-std::vector<bool> computeValidPoints(const std::vector<PointType>& input_scan, const LidarParams& lidar_params,
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+std::vector<bool> computeValidPoints(const std::vector<PointType, Alloc<PointType>>& input_scan,
+                                     const LidarParams& lidar_params,
                                      const FeatureExtractionParams& params = FeatureExtractionParams());
 
 /**
@@ -181,14 +185,14 @@ namespace features_internal {
  * @param in_features: The features to convert
  * @returns in_features with all points converted to eigen vectors
  */
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-LoamFeatures<Eigen::Vector3d> featuresToEigen(const LoamFeatures<PointType>& in_features) {
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+LoamFeatures<Eigen::Vector3d> featuresToEigen(const LoamFeatures<PointType, Alloc>& in_features) {
   LoamFeatures<Eigen::Vector3d> result;
   for (const PointType pt : in_features.edge_points) {
-    result.edge_points.push_back(pointToEigen<PointType, Accessor>(pt));
+    result.edge_points.push_back(pointToEigen<Accessor>(pt));
   }
   for (const PointType pt : in_features.planar_points) {
-    result.planar_points.push_back(pointToEigen<PointType, Accessor>(pt));
+    result.planar_points.push_back(pointToEigen<Accessor>(pt));
   }
   return result;
 }
@@ -199,11 +203,11 @@ LoamFeatures<Eigen::Vector3d> featuresToEigen(const LoamFeatures<PointType>& in_
  * WARN: Mutates valid_mask marking neighbors of found features invalid
  * All param names match the local variable names in extractFeatures
  */
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
+template <typename PointType, template <typename> class Alloc>
 void extractSectorEdgeFeatures(const size_t& sector_start_point, const size_t& sector_end_point,
-                               const std::vector<PointType>& input_scan, const std::vector<PointCurvature>& curvature,
-                               const FeatureExtractionParams& params, LoamFeatures<PointType>& out_features,
-                               std::vector<bool>& valid_mask);
+                               const std::vector<PointType, Alloc<PointType>>& input_scan,
+                               const std::vector<PointCurvature>& curvature, const FeatureExtractionParams& params,
+                               LoamFeatures<PointType, Alloc>& out_features, std::vector<bool>& valid_mask);
 
 /** @brief Extracts planar features and updates the mask for a scanline sector defined by [sector_start, sector_end]
  * This is used internally in feature extraction, requires that curvature is sorted in range [sector_start, sector_end]
@@ -212,11 +216,11 @@ void extractSectorEdgeFeatures(const size_t& sector_start_point, const size_t& s
  *
  * All param names match the local variable names in extractFeatures
  */
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
+template <typename PointType, template <typename> class Alloc>
 void extractSectorPlanarFeatures(const size_t& sector_start_point, const size_t& sector_end_point,
-                                 const std::vector<PointType>& input_scan, const std::vector<PointCurvature>& curvature,
-                                 const FeatureExtractionParams& params, LoamFeatures<PointType>& out_features,
-                                 std::vector<bool>& valid_mask);
+                                 const std::vector<PointType, Alloc<PointType>>& input_scan,
+                                 const std::vector<PointCurvature>& curvature, const FeatureExtractionParams& params,
+                                 LoamFeatures<PointType, Alloc>& out_features, std::vector<bool>& valid_mask);
 
 /** @brief Marks edge points as invalid (see computeValidPoints) returns true if the point is marked
  * WARN: Potentially mutates mask if the point is invalid

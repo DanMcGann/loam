@@ -9,20 +9,20 @@
 namespace loam {
 
 /*********************************************************************************************************************/
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan, const LidarParams& lidar_params,
-                                        const FeatureExtractionParams& params) {
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+LoamFeatures<PointType, Alloc> extractFeatures(const std::vector<PointType, Alloc<PointType>>& input_scan,
+                                               const LidarParams& lidar_params, const FeatureExtractionParams& params) {
   validateLidarScan(input_scan, lidar_params);
   // Initialize Results
-  LoamFeatures<PointType> out_features;
+  LoamFeatures<PointType, Alloc> out_features;
   // Compute the number of points in each sector given the parameters
   const size_t points_per_sector = lidar_params.points_per_line / params.number_sectors;
 
   // Step 1: Compute Curvature for all points this is used in the extraction of both planar and edge feature points
-  std::vector<PointCurvature> curvature = computeCurvature<PointType, Accessor>(input_scan, lidar_params, params);
+  std::vector<PointCurvature> curvature = computeCurvature<Accessor>(input_scan, lidar_params, params);
 
   // Step 2: Compute mask of valid points
-  std::vector<bool> valid_mask = computeValidPoints<PointType, Accessor>(input_scan, lidar_params, params);
+  std::vector<bool> valid_mask = computeValidPoints<Accessor>(input_scan, lidar_params, params);
 
   /// Step 3: Detect features in each sector of each scan line
   for (size_t scan_line_idx = 0; scan_line_idx < lidar_params.scan_lines; scan_line_idx++) {
@@ -51,9 +51,9 @@ LoamFeatures<PointType> extractFeatures(const std::vector<PointType>& input_scan
 }
 
 /*********************************************************************************************************************/
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-std::vector<PointCurvature> computeCurvature(const std::vector<PointType>& input_scan, const LidarParams& lidar_params,
-                                             const FeatureExtractionParams& params) {
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+std::vector<PointCurvature> computeCurvature(const std::vector<PointType, Alloc<PointType>>& input_scan,
+                                             const LidarParams& lidar_params, const FeatureExtractionParams& params) {
   validateLidarScan(input_scan, lidar_params);
   // Allocate vector (with zeros) to store curvature
   std::vector<PointCurvature> curvature;
@@ -88,9 +88,9 @@ std::vector<PointCurvature> computeCurvature(const std::vector<PointType>& input
 }
 
 /*********************************************************************************************************************/
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-std::vector<bool> computeValidPoints(const std::vector<PointType>& input_scan, const LidarParams& lidar_params,
-                                     const FeatureExtractionParams& params) {
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+std::vector<bool> computeValidPoints(const std::vector<PointType, Alloc<PointType>>& input_scan,
+                                     const LidarParams& lidar_params, const FeatureExtractionParams& params) {
   validateLidarScan(input_scan, lidar_params);
   // Allocate mask (with valid flags)
   std::vector<bool> mask(input_scan.size(), true);
@@ -109,9 +109,9 @@ std::vector<bool> computeValidPoints(const std::vector<PointType>& input_scan, c
       const PointType next_point = input_scan[idx + 1];
 
       // Compute the range of each point
-      const double point_range = pointRange<PointType, Accessor>(point);
-      const double next_point_range = pointRange<PointType, Accessor>(next_point);
-      const double prev_point_range = pointRange<PointType, Accessor>(prev_point);
+      const double point_range = pointRange<Accessor>(point);
+      const double next_point_range = pointRange<Accessor>(next_point);
+      const double prev_point_range = pointRange<Accessor>(prev_point);
 
       // CHECK 2: Is the point in the valid range of the LiDAR
       if (features_internal::markOutOfRangeInvalid(idx, point_range, lidar_params, params, mask)) continue;
@@ -135,11 +135,11 @@ std::vector<bool> computeValidPoints(const std::vector<PointType>& input_scan, c
  */
 /*********************************************************************************************************************/
 namespace features_internal {
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
+template <typename PointType, template <typename> class Alloc>
 void extractSectorEdgeFeatures(const size_t& sector_start_point, const size_t& sector_end_point,
-                               const std::vector<PointType>& input_scan, const std::vector<PointCurvature>& curvature,
-                               const FeatureExtractionParams& params, LoamFeatures<PointType>& out_features,
-                               std::vector<bool>& valid_mask) {
+                               const std::vector<PointType, Alloc<PointType>>& input_scan,
+                               const std::vector<PointCurvature>& curvature, const FeatureExtractionParams& params,
+                               LoamFeatures<PointType, Alloc>& out_features, std::vector<bool>& valid_mask) {
   size_t num_sector_edge_features = 0;
   for (size_t sorted_curv_idx_p1 = sector_end_point; sorted_curv_idx_p1 > sector_start_point; sorted_curv_idx_p1--) {
     const PointCurvature curv = curvature[sorted_curv_idx_p1 - 1];  // subtraction as loop cannot go negative
@@ -158,11 +158,11 @@ void extractSectorEdgeFeatures(const size_t& sector_start_point, const size_t& s
 }
 
 /*********************************************************************************************************************/
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
+template <typename PointType, template <typename> class Alloc>
 void extractSectorPlanarFeatures(const size_t& sector_start_point, const size_t& sector_end_point,
-                                 const std::vector<PointType>& input_scan, const std::vector<PointCurvature>& curvature,
-                                 const FeatureExtractionParams& params, LoamFeatures<PointType>& out_features,
-                                 std::vector<bool>& valid_mask) {
+                                 const std::vector<PointType, Alloc<PointType>>& input_scan,
+                                 const std::vector<PointCurvature>& curvature, const FeatureExtractionParams& params,
+                                 LoamFeatures<PointType, Alloc>& out_features, std::vector<bool>& valid_mask) {
   size_t num_sector_planar_features = 0;
   for (size_t sorted_curv_idx = sector_start_point; sorted_curv_idx < sector_end_point; sorted_curv_idx++) {
     const PointCurvature curv = curvature[sorted_curv_idx];

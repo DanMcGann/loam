@@ -78,7 +78,7 @@ struct AtAccessor {
 };
 
 /// @brief Computes the range from the LiDAR to the point
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
+template <template <typename> class Accessor = FieldAccessor, typename PointType>
 double pointRange(const PointType& pt) {
   return std::sqrt(Accessor<PointType>::x(pt) * Accessor<PointType>::x(pt)    //
                    + Accessor<PointType>::y(pt) * Accessor<PointType>::y(pt)  //
@@ -86,7 +86,7 @@ double pointRange(const PointType& pt) {
 }
 
 /// @brief Converts a point type into an Eigen 3d vector
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
+template <template <typename> class Accessor = FieldAccessor, typename PointType>
 Eigen::Vector3d pointToEigen(const PointType& pt) {
   return (Eigen::Vector3d() << Accessor<PointType>::x(pt), Accessor<PointType>::y(pt), Accessor<PointType>::z(pt))
       .finished();
@@ -101,8 +101,8 @@ Eigen::Vector3d pointToEigen(const PointType& pt) {
  * ##     ## ##       ##       ##        ##       ##    ##  ##    ##
  * ##     ## ######## ######## ##        ######## ##     ##  ######
  */
-template <typename PointType>
-void validateLidarScan(const std::vector<PointType>& input_scan, const LidarParams& lidar_params) {
+template <typename PointType, template <typename> class Alloc>
+void validateLidarScan(const std::vector<PointType, Alloc<PointType>>& input_scan, const LidarParams& lidar_params) {
   if (input_scan.size() != lidar_params.scan_lines * lidar_params.points_per_line) {
     std::stringstream msg_stream;
     msg_stream << "LOAM: provided lidar scan size ( " << input_scan.size()

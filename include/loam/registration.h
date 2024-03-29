@@ -125,8 +125,8 @@ struct RegistrationDetail {
  * @returns The transform from source to target (target_T_source)
  * WARN: Mutates detail if provided
  */
-template <typename PointType, template <typename> class Accessor = FieldAccessor>
-Pose3d registerFeatures(const LoamFeatures<PointType>& source, const LoamFeatures<PointType>& target,
+template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class  Alloc>
+Pose3d registerFeatures(const LoamFeatures<PointType, Alloc>& source, const LoamFeatures<PointType, Alloc>& target,
                         const Pose3d& target_T_source_init, const RegistrationParams& params = RegistrationParams(),
                         std::shared_ptr<RegistrationDetail> detail = nullptr);
 
