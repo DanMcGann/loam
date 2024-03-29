@@ -20,6 +20,14 @@ Pose3d Pose3d::compose(const Pose3d &other) const {
 /*********************************************************************************************************************/
 Eigen::Vector3d Pose3d::act(const Eigen::Vector3d &p) const { return rotation * p + translation; }
 
+/*********************************************************************************************************************/
+Eigen::Matrix4d Pose3d::matrix() const {
+  Eigen::Matrix4d mat = Eigen::Matrix4d::Identity();
+  mat.block<3, 3>(0, 0) = rotation.toRotationMatrix();
+  mat.block<3, 1>(0, 3) = translation;
+  return mat;
+}
+
 /**
  * #### ##    ## ######## ######## ########  ##    ##    ###    ##
  *  ##  ###   ##    ##    ##       ##     ## ###   ##   ## ##   ##

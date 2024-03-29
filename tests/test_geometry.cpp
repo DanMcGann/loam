@@ -62,6 +62,22 @@ TEST(TestPose3d, TestInverse) {
   EXPECT_TRUE(p1_inv.translation.isApprox(expected_t, 1e-8));
 }
 
+TEST(TestPose3d, TestMatrix) {
+  // Expected result (generated using GTSAM's geometry library)
+  Eigen::Matrix4d expected;
+  expected << 0.87992318, -0.360299, 0.30970927, 1.,  //
+      0.37202555, 0.92794845, 0.0225534, -5.,         //
+      -0.29552021, 0.09537451, 0.95056379, 2.,        //
+      0., 0., 0., 1.;
+  // Setup
+  Eigen::Quaterniond q1(0.9693342323515085, 0.018781217536151106, 0.15609411554196426, 0.18887307630401792);
+  Eigen::Vector3d t1(1., -5., 2.);
+
+  Pose3d p1(q1, t1);
+  Eigen::Matrix4d mat = p1.matrix();
+  EXPECT_TRUE(mat.isApprox(expected, 1e-6));
+}
+
 /**
  * ########  ####  ######  ########    ###    ##    ##  ######  ########  ######
  * ##     ##  ##  ##    ##    ##      ## ##   ###   ## ##    ## ##       ##    ##

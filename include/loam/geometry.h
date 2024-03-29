@@ -43,6 +43,8 @@ struct Pose3d {
   Pose3d compose(const Pose3d &other) const;
   /// @brief A pose e_T_s acts on a point p_s according to [p_e = e_T_s * p_s]
   Eigen::Vector3d act(const Eigen::Vector3d &p) const;
+  /// @brief Converts the pose into a 4x4 transformation matrix
+  Eigen::Matrix4d matrix() const;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
