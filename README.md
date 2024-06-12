@@ -10,7 +10,7 @@ This package provides a lightweight implementation of "LiDAR Odometry and Mappin
 *Example Lidar Scan and Extracted Features*
 
 ## Why use this package?
-In a world where there are many implementations of LOAM including [LOAM](https://github.com/laboshinl/loam_velodyne), [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM), [F-LOAM](https://github.com/wh200720041/floam), [LeGO-LOAM](https://github.com/RobustFieldAutonomyLab/LeGO-LOAM) etc. Why do we need another LOAM implementation? The reasons are threefold 1) Portability, 2) Clarity+Simplicity, 3) Correctness.
+In a world where there are many implementations of LOAM including [LOAM](https://github.com/laboshinl/loam_velodyne), [A-LOAM](https://github.com/HKUST-Aerial-Robotics/A-LOAM), [F-LOAM](https://github.com/wh200720041/floam), [LeGO-LOAM](https://github.com/RobustFieldAutonomyLab/LeGO-LOAM) etc. Why do we need another LOAM implementation? The reasons are 1) Portability, 2) Clarity+Simplicity, 3) Correctness, and 4) Speed.
 
 #### Portability
 Existing LOAM implementations exist as ROS packages with pre-existing topic/parameter/startup/timing/additional-sensor design. This makes them difficult to use in non-ROS environments, or even within ROS projects where the topic/parameter/startup/timing/additional-sensor design differs from that assumed by the LOAM developers. Conforming existing LOAM implementations or your own ROS project can be difficult and time consuming.
@@ -26,6 +26,11 @@ We provide a professional implementation of LOAM developed from the ground up th
 Given their derivation from messy research-equality code existing LOAM implementations are typically subject to various implementation bugs. Often these bugs do not result in decreases in performance, but do cause deviations from the behavior described in [1].
 
 This implementation strives to faithfully reproduce the LOAM method as presented in [1] and through unit testing maintain correctness of behaviors.
+
+#### Speed
+Using modern c++ practices permits a very fast implementation. On data from an Ouster 64 LiDAR Containing 65536 points -- Feature Extraction takes only ~ 3.5ms and registration takes only ~13ms. For LiDAR data at 10Hz this means we can run scan-to-scan registration 6x faster than real-time without any down sampling!!!
+
+Note: These values are from a quick-and-dirty profiling on my laptop. More principled profiling statistics will come if I magically find lots of free time or if someone is willing to help out!
 
 # Example Usage
 
