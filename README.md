@@ -98,6 +98,8 @@ The following libraries are required by `loam`. Only Eigen needs to be installed
   * Included via fetch content to access correct version.
 * Nanoflann [v1.5.5]
   * Included via fetch content to access correct version.
+* Pybind11
+  * Used only if python bindings are built, and included via fetch content.
 
 ## Installation
 ### C++
