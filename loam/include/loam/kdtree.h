@@ -52,6 +52,3 @@ std::vector<size_t> knnSearch(const KDTree& tree, const Eigen::Vector3d& query, 
 }  // namespace kdtree_internal
 
 }  // namespace loam
-
-// Include the actual implementation
-#include "loam/kdtree-inl.h"

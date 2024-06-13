@@ -30,9 +30,11 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nanoflann)
 
 # Define the library
-add_library(loam INTERFACE)
-target_link_libraries(loam INTERFACE Eigen3::Eigen Ceres::ceres nanoflann)
-target_include_directories(loam INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+file(GLOB loam_srcs "${CMAKE_CURRENT_SOURCE_DIR}/loam/src/*.cpp")
+file(GLOB loam_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/loam/include/loam/*.h")
+add_library(loam SHARED ${loam_srcs} ${loam_hdrs})
+target_link_libraries(loam PUBLIC Eigen3::Eigen Ceres::ceres nanoflann)
+target_include_directories(loam PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/loam/include")
 
 # If testing is configured, setup the tests
 option(LOAM_BUILD_TESTS "Build unit tests" OFF)

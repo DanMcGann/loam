@@ -1,13 +1,22 @@
 message(STATUS "================  TESTING ENABLED. BUILDING TESTS  ======================")
-# Find Gtest which we use for unit tests
-find_package(GTest REQUIRED)
-enable_testing()
+# Setup gtest
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        origin/main
+)
+option(INSTALL_GTEST OFF)
+option(BUILD_GMOCK OFF)
+FetchContent_MakeAvailable(googletest)
+enable_testing() # enable gtest
 
-# Setup all tests
-file(GLOB test_executables "test*.cpp")
-foreach(test ${test_executables})
-    get_filename_component(stem ${test} NAME_WE)
-    add_executable(${stem} ${test})
-    target_link_libraries(${stem} loam gtest gtest_main pthread)
-    add_test(${stem} ${stem})
-endforeach()
+# Make test target
+file(GLOB_RECURSE tests_srcs *.cpp)
+add_executable(loam-tests ${tests_srcs})
+target_link_libraries(loam-tests PUBLIC loam Eigen3::Eigen gtest gtest_main)
+add_test(NAME loam-tests COMMAND loam-tests)
+
+# Make runnable from "make check" or "make test"
+add_custom_target(check COMMAND loam-tests)
+add_custom_target(test COMMAND loam-tests)

@@ -88,7 +88,7 @@ struct PointCurvature {
 };
 
 /// @brief Comparator for PointCurvature used in std algorithms (like sort)
-bool curvatureComparator(const PointCurvature& lhs, const PointCurvature& rhs) { return lhs.curvature < rhs.curvature; }
+inline bool curvatureComparator(const PointCurvature& lhs, const PointCurvature& rhs) { return lhs.curvature < rhs.curvature; }
 
 /**
  * #### ##    ## ######## ######## ########  ########    ###     ######  ########

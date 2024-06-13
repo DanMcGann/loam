@@ -64,14 +64,14 @@ Of course your usage of `loam` will likely also include steps to dewarp pointclo
 
 
 # Documentation
-## Project Structure
-* `include/loam` - Contains entire implementation of the LOAM method.
+### Project Structure
+* `loam` - Contains entire implementation of the LOAM method in the `include + src` subdirectories.
   * `common*` - Defines utility types+functions used through out the code base. 
   * `features*` - Defines functionality to extract features from pointclouds
   * `geometry*` - Defines geometric primitives.
   * `kdtree*` - Defines interface for a KDTree used in feature registration. 
   * `registration*` - Defines functionally to register two feature sets.
-  * `loam.g` - Convenience header for including entire library.
+  * `loam.h` - Convenience header for including entire library.
 * `python/` - Contains definition of python bindings.
 * `tests/` - Contains unit tests for the library.
 
@@ -79,19 +79,19 @@ All code is currently documented inline (doxygen coming soon!). For example usag
 
 By far the most important functions (and thus the documentation to read carefully) are `extractFeatures` in `features.h` and `registerFeatures` in `registration.h`.
 
-## PointClouds Types
-`loam` was designed to handle generic PointCloud definitions. Specifically, we only assume that PointClouds are Lists of structures of templated type `T`. The user can use any `T` so long as it includes `x, y, z` elements. The only thing the user has to do is to provide the correct `Accessor` function to extract this elements from `T`. 
+### PointClouds Types
+`loam` was designed to handle generic PointCloud definitions. Specifically, we only assume that PointClouds are Lists of structures of templated type `T`. The user can use any `T` so long as it includes `x, y, z` elements. The only thing the user has to do is to provide the correct `Accessor` function to extract this elements from `T`.
 
 We provide 3 common `Accessor` functions in `common.h` and examples of how to use `field` and `paren` accessors can be found in `tests/test_feature_extraction.cpp` and `test_registration` respectively. 
 
 Since we expect most people to use LOAM along side PCL who's point structures are accessed with fields, we set the default accessor to `fieldAccessor`.
 
-## PointClouds Structure
+### PointClouds Structure
 To match the method presented in [1] features are found independently in each scan line from the LiDAR. Thus LOAM is reliant of having a structured pointcloud. Specifically, the feature extraction module requires pointclouds to be in row major order. This is intended to help with caching as each scan-line is searched over and thus efficiency in the long run.
 
 
-## Dependencies
-The following libraries are required by `loam`. Only Eigen needs to be installed by the user, Ceres, and Nanoflann are included via fetch content content and should work regardless of whether or not these libraries are installed system wide.
+### Dependencies
+The following libraries are required by `loam`. Only Eigen needs to be installed by the user, Ceres, and nanoflann are included via fetch content content and should work regardless of whether or not these libraries are installed system wide.
 * Eigen [3+]
   * Must be installed on system.
 * Ceres [2.2.0]
@@ -99,10 +99,12 @@ The following libraries are required by `loam`. Only Eigen needs to be installed
 * Nanoflann [v1.5.5]
   * Included via fetch content to access correct version.
 * Pybind11
-  * Used only if python bindings are built, and included via fetch content.
+  * Required only if python bindings are built, and included via fetch content.
+* GTest
+  * Required only if unit tests are build, and included via fetch content.
 
-## Installation
-### C++
+### Installation
+#### C++
 We do not provide infrastructure to install this library. It is only ever going to be used in the context of another project, so we heavily suggest incorporating it into your CMake based project via `FetchContent`. An example of the CMake code required to do so can be found below and an example of this being used in a larger project is coming soon!
 
 ```
@@ -115,8 +117,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(loam)
 ```
 
-## Python
-Unfortunately, python does not provide the same level of convience to include in existing projects. To install the python bindings...
+#### Python
+Unfortunately, python does not provide the same level of convenience to include in existing projects. To install the python bindings...
 * Clone this repository
   * `git clone git@github.com:DanMcGann/loam.git`
 * Build the code
@@ -128,8 +130,19 @@ Unfortunately, python does not provide the same level of convience to include in
 
 Note: The CMake target `python-install` uses `pip` under the hood, this means that you can specifically install `loam` within conda or similar environments.
 
+### Tests
+To run the unit tests:
+* Clone this repository
+  * `git clone git@github.com:DanMcGann/loam.git`
+* Build the code
+  * `cd loam && mkdir build && cd build`
+  * `cmake .. -DLOAM_BUILD_TESTS=TRUE`
+  * `make`
+* Run the Tests
+  * `make test`
+
 ## Quirks
-* We need ceres 2.2.0 to make use of manifolds so we access it via fetch content. This causes a cmake name collision of `uninstall` with nanoflann. Since neigher prefix their target names. Thankfully ceres provides an option `PROVIDE_UNINSTALL_TARGET` (also not prefixed :/) to resolve this collision. Additionally, since ceres is built locally, we will never need to install OR uninstall it, so loosing this target is a-okay.
+* We need ceres 2.2.0 to make use of manifolds so we access it via fetch content. This causes a cmake name collision of `uninstall` with nanoflann. Since neither prefix their target names. Thankfully ceres provides an option `PROVIDE_UNINSTALL_TARGET` (also not prefixed :/) to resolve this collision. Additionally, since ceres is built locally, we will never need to install OR uninstall it, so loosing this target is a-okay.
 
 # Issues
 If you run into issues or find bugs in the code please fill out a issue on Github! If you are reporting a bug please provide a unit test that demonstrates the bug in question!

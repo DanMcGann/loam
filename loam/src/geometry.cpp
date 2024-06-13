@@ -2,7 +2,7 @@
  * @author Dan McGann
  * @date Mar 2024
  */
-#include "loam/kdtree.h"
+#include "loam/geometry.h"
 
 namespace loam {
 
@@ -59,15 +59,6 @@ std::pair<Line, double> fitLine(Eigen::MatrixXd points) {
 }
 
 /*********************************************************************************************************************/
-template <typename T>
-T pointToLineDistance(const Eigen::Matrix<T, 3, 1> &point, const Eigen::Matrix<T, 3, 1> &line_a,
-                      const Eigen::Matrix<T, 3, 1> &line_b) {
-  T numerator = ((point - line_a).cross(point - line_b)).norm();
-  T denominator = (line_a - line_b).norm();
-  return numerator / denominator;
-}
-
-/*********************************************************************************************************************/
 std::pair<Plane, double> fitPlane(Eigen::MatrixXd points) {
   assert(points.rows() >= 3 && points.cols() == 3);
   // Compose the ones vector
@@ -79,12 +70,6 @@ std::pair<Plane, double> fitPlane(Eigen::MatrixXd points) {
   // Compute the average distance to the plane
   double avg_dist = (points * plane.normal - (ones_vec * plane.d)).mean();
   return std::make_pair(plane, avg_dist);
-}
-
-/*********************************************************************************************************************/
-template <typename T>
-T pointToPlaneDistance(const Eigen::Matrix<T, 3, 1> &point, const Eigen::Matrix<T, 3, 1> &normal, const T distance) {
-  return abs(normal.dot(point) - distance);
 }
 
 }  // namespace geometry_internal
