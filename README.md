@@ -126,9 +126,9 @@ Unfortunately, python does not provide the same level of convenience to include 
   * `cmake .. -DLOAM_BUILD_PYTHON=TRUE`
   * `make`
 * Install the Python Bindings
-  * `make python-install`
+  * `make loam-python-install`
 
-Note: The CMake target `python-install` uses `pip` under the hood, this means that you can specifically install `loam` within conda or similar environments.
+Note: The CMake target `loam-python-install` uses `pip` under the hood, this means that you can specifically install `loam` within conda or similar environments by setting the CMake variables `Python_EXECUTABLE` to the executable of the environment (This can be found by running `which python` while the environment is enabled). We also provide the CMake target `loam-python-uninstall` to easily remove the module.
 
 ### Tests
 To run the unit tests:
@@ -139,7 +139,7 @@ To run the unit tests:
   * `cmake .. -DLOAM_BUILD_TESTS=TRUE`
   * `make`
 * Run the Tests
-  * `make test`
+  * `make loam-test` or `make loam-check`
 
 ## Quirks
 * We need ceres 2.2.0 to make use of manifolds so we access it via fetch content. This causes a cmake name collision of `uninstall` with nanoflann. Since neither prefix their target names. Thankfully ceres provides an option `PROVIDE_UNINSTALL_TARGET` (also not prefixed :/) to resolve this collision. Additionally, since ceres is built locally, we will never need to install OR uninstall it, so loosing this target is a-okay.

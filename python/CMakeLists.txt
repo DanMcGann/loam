@@ -34,12 +34,12 @@ file(GENERATE OUTPUT ${LOAM_PYTHON_BUILD_DIRECTORY}/loam/__init__.py CONTENT "fr
 
 # Setup the install command. Simply delegates to pip (should work with environmets)
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
-add_custom_target(python-install
+add_custom_target(loam-python-install
         COMMAND ${Python_EXECUTABLE} -m pip install .
         DEPENDS loam_python
         WORKING_DIRECTORY ${LOAM_PYTHON_BUILD_DIRECTORY})
 
 # Setup uninstall command. This can also be done with pip
-add_custom_target(python-uninstall
-        COMMAND pip uninstall loam
+add_custom_target(loam-python-uninstall
+        COMMAND ${Python_EXECUTABLE} -m pip uninstall loam
         WORKING_DIRECTORY ${LOAM_PYTHON_BUILD_DIRECTORY})

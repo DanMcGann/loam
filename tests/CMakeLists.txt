@@ -18,5 +18,5 @@ target_link_libraries(loam-tests PUBLIC loam Eigen3::Eigen gtest gtest_main)
 add_test(NAME loam-tests COMMAND loam-tests)
 
 # Make runnable from "make check" or "make test"
-add_custom_target(check COMMAND loam-tests)
-add_custom_target(test COMMAND loam-tests)
+add_custom_target(loam-check COMMAND loam-tests)
+add_custom_target(loam-test COMMAND loam-tests)
