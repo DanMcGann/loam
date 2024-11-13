@@ -14,7 +14,7 @@ Pose3d Pose3d::inverse() const {
 
 /*********************************************************************************************************************/
 Pose3d Pose3d::compose(const Pose3d &other) const {
-  return Pose3d(rotation * other.rotation, translation + (rotation * other.translation));
+  return Pose3d(other.rotation * rotation, other.translation + (other.rotation * translation));
 }
 
 /*********************************************************************************************************************/
