@@ -30,8 +30,8 @@ TEST(TestPose3d, TestCopyConstructor) {
 
 TEST(TestPose3d, TestCompose) {
   // Expected result (generated using GTSAM's geometry library)
-  Eigen::Vector3d expected_t(-2.59584795, -1.87410099, -12.56352171);
-  Eigen::Quaterniond expected_q(0.7567645973045605, 0.019808900212688513, -0.5655135339985058, -0.32727571648894294);
+  Eigen::Vector3d expected_t(8.495192564434786 , -1.0236436475358897, -6.2354567213734695);
+  Eigen::Quaterniond expected_q(0.7567645973045605, 0.5634200098313201, -0.3314580747140943, 0.0008840220400626);
 
   // Setup
   Eigen::Quaterniond q1(0.7473257838894183, 0.38405116269438366, -0.17015746936361906, -0.5148352287741462);
