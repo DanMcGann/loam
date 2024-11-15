@@ -60,7 +60,7 @@ Pose3d registerFeatures(const LoamFeatures<PointType, Alloc>& source, const Loam
     }
 
     // Update the solution
-    target_T_source_est = target_T_source_est.compose(estimate_update);
+    target_T_source_est = estimate_update.compose(target_T_source_est);
 
     // Check for convergence - defined as when the computed update is sufficiently small
     const double angle_change = estimate_update.rotation.angularDistance(Eigen::Quaterniond::Identity());
