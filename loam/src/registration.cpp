@@ -49,6 +49,10 @@ std::vector<std::pair<size_t, size_t>> associateEdges(const RegistrationParams& 
     if (condition_number < params.min_line_condition_number) continue;  // GUARD: Edge points not co-linear
 
     // Construct the cost function and add it to the problem
+    // Note the point has already been transformed by the current estimate
+    // Therefore WRT the edge cost function class
+    //     - The source frame = current estimate of the target frame
+    //     - The target frame = the "true" target frame
     problem.AddResidualBlock(EdgeCostFunction::Create(point_tgt, line), new ceres::HuberLoss(1.0),
                              estimate_update.rotation.coeffs().data(), estimate_update.translation.data());
     // Accumulate the association
@@ -86,6 +90,10 @@ std::vector<std::pair<size_t, size_t>> associatePlanes(const RegistrationParams&
     if (avg_dist > params.max_avg_point_plane_dist) continue;  // GUARD: Plane points not co-planar
 
     // Construct the cost function and add it to the problem
+    // Note the point has already been transformed by the current estimate
+    // Therefore WRT the plane cost function class 
+    //     - The source frame = current estimate of the target frame
+    //     - The target frame = the "true" target frame
     problem.AddResidualBlock(PlaneCostFunction::Create(point_tgt, plane), new ceres::HuberLoss(1.0),
                              estimate_update.rotation.coeffs().data(), estimate_update.translation.data());
     // Accumulate the association
