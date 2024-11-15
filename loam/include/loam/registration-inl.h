@@ -31,7 +31,8 @@ Pose3d registerFeatures(const LoamFeatures<PointType, Alloc>& source, const Loam
     ceres::Problem problem(problem_options);
 
     // Define the parameters of the system and their respective manifolds
-    Pose3d estimate_update;
+    // Note we are estimating a relative update between from the current target estimate to the true target frame
+    Pose3d estimate_update;  // next_target_T_prev_target
     problem.AddParameterBlock(estimate_update.rotation.coeffs().data(), 4, new ceres::QuaternionManifold());
     problem.AddParameterBlock(estimate_update.translation.data(), 3, new ceres::EuclideanManifold<3>());
 
@@ -60,6 +61,7 @@ Pose3d registerFeatures(const LoamFeatures<PointType, Alloc>& source, const Loam
     }
 
     // Update the solution
+    // The update is computed as next_target_T_prev_target so compose it on the left side
     target_T_source_est = estimate_update.compose(target_T_source_est);
 
     // Check for convergence - defined as when the computed update is sufficiently small
@@ -92,7 +94,7 @@ bool EdgeCostFunction::operator()(const T* const t_R_s_ptr, const T* const t_p_s
   Eigen::Map<const Eigen::Quaternion<T>> t_R_s(t_R_s_ptr);
   Eigen::Map<const Eigen::Matrix<T, 3, 1>> t_p_s(t_p_s_ptr);
 
-  // Transform the source point into the target frame given the current estimate
+  // Transform the point into the target frame given the current estimate
   const Eigen::Matrix<T, 3, 1> target_pt_ = t_R_s * source_pt_.cast<T>() + t_p_s;
 
   // Compute the loss
@@ -106,7 +108,7 @@ bool PlaneCostFunction::operator()(const T* const t_R_s_ptr, const T* const t_p_
   Eigen::Map<const Eigen::Quaternion<T>> t_R_s(t_R_s_ptr);
   Eigen::Map<const Eigen::Matrix<T, 3, 1>> t_p_s(t_p_s_ptr);
 
-  // Transform the source point into the target frame given the current estimate
+  // Transform the point into the target frame given the current estimate
   const Eigen::Matrix<T, 3, 1> target_pt_ = t_R_s * source_pt_.cast<T>() + t_p_s;
 
   // Compute the loss
