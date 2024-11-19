@@ -60,7 +60,7 @@ for i in range(0, LENGTH):
 ```
 *Note `lidar_params` and `read_ouster_cloud` are specific to the LiDAR used in this dataset.*
 
-Of course your usage of `loam` will likely also include steps to dewarp pointclouds, incorporate data from additional sensors etc.
+Of course simple Scan-to-Scan matching does drift. To get better performance your usage of `loam` will likely also include steps to dewarp pointclouds, incorporate data from additional sensors, maintain a local map of points, etc.
 
 
 # Documentation
