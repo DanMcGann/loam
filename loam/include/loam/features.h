@@ -37,17 +37,17 @@ namespace loam {
 struct FeatureExtractionParams {
   /// @brief The number of neighbor points (on either size) to use when computing curvature [1] Eq. (1)
   /// A reasonable number is between 3 and 6, less and curvature is too noisy, more and points cover too large an area
-  size_t neighbor_points{5};
+  size_t neighbor_points{3};
   /// @brief The number of sectors to break each scan line into when detecting feature points
   /// A reasonable number is between 4 and 8
   // If the number of points per line is not divisible by number_sectors, remainder points are added to the last sector
   size_t number_sectors{6};
   /// @brief The maximum number of edge features to detect in each sector
   /// Reasonable numbers depends on compute power available for registration, with more points registration is expensive
-  size_t max_edge_feats_per_sector{5};
+  size_t max_edge_feats_per_sector{10};
   /// @brief The maximum number of planar features to detect in each sector
   /// Reasonable numbers depends on compute power available for registration, with more points registration is expensive
-  size_t max_planar_feats_per_sector{5};
+  size_t max_planar_feats_per_sector{50};
   /// @brief Threshold for edge feature curvature.
   /// The UNNORMALIZED curvature must be greater than this thresh to be considered an edge feature.
   /// WARN: This is an unintuitive param manual tuning and plotting results is recommended
@@ -55,14 +55,14 @@ struct FeatureExtractionParams {
   /// @brief Threshold for planar feature curvature.
   /// The UNNORMALIZED curvature must be less than this thresh to be considered a planar feature.
   /// WARN: This is an unintuitive param manual tuning and plotting results is recommended
-  double planar_feat_threshold{0.1};
+  double planar_feat_threshold{1.0};
   /// @brief This distance in point units (e.x. meters) between neighboring points to be considered for occlusion
   /// Reasonable values are on the order of 1m for most robotics applications
-  double occlusion_thresh{0.25};
+  double occlusion_thresh{0.5};
   /// @brief The range difference (as proportion of range) between consecutive points to be considered too parallel
   /// See computeValidPoints::Check 4 for details
   /// WARN: This is an unintuitive param manual tuning and plotting results is recommended
-  double parallel_thresh{0.002};
+  double parallel_thresh{1.0};
 };
 
 /// @brief Structure for storing edge and planar feature points from a scan together
