@@ -14,11 +14,9 @@ import open3d as o3d
 import open3d.visualization.gui as gui
 import open3d.visualization.rendering as rendering
 
-
+# Manually access the loam package in case it is not installed
 SCRIPT_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(str(SCRIPT_DIR / ".." / "build" / "python"))
-
-print(sys.path)
 import loam
 
 
@@ -277,9 +275,8 @@ def main():
     # We need to initialize the application, which finds the necessary shaders for
     # rendering and prepares the cross-platform window abstraction.
     gui.Application.instance.initialize()
-
+    # Initialize the feature viewer
     w = FeatureViewer()
-
     # Run the event loop. This will not return until the last window is closed.
     gui.Application.instance.run()
 

@@ -73,6 +73,8 @@ Of course simple Scan-to-Scan matching does drift. To get better performance you
   * `registration*` - Defines functionally to register two feature sets.
   * `loam.h` - Convenience header for including entire library.
 * `python/` - Contains definition of python bindings.
+* `scripts/` - Contains helper scripts.
+  * `tune_feature_extraction.py` - An `open3d` based visualizer to help users tune feature extraction parameters.
 * `tests/` - Contains unit tests for the library.
 
 All code is currently documented inline (doxygen coming soon!). For example usage see tests in `tests/` and an example ros wrapper is coming soon.
@@ -140,6 +142,11 @@ To run the unit tests:
   * `make`
 * Run the Tests
   * `make loam-test` or `make loam-check`
+
+### Scripts
+To run the feature extraction tuning script users will need to build the python bindings, but do not necessarily need to install them as the script manually accesses the package if built. Users will additionally need `open3d` and `numpy` installed in their python environment.
+
+Running this script will open an interactive GUI. Users may use the menu select a LiDAR scan (in PCD format, and visualized in black) from which to compute visualize the extracted feature points (orange=edge, blue=planar). The GUI also allows users to dynamically adjust the feature extraction parameters to visualize their effects and tune the hyper parameters. Note: users must ensure that the LiDAR configuration is correct for the selected LiDAR Scan.
 
 ## Quirks
 * We need ceres 2.2.0 to make use of manifolds so we access it via fetch content. This causes a cmake name collision of `uninstall` with nanoflann. Since neither prefix their target names. Thankfully ceres provides an option `PROVIDE_UNINSTALL_TARGET` (also not prefixed :/) to resolve this collision. Additionally, since ceres is built locally, we will never need to install OR uninstall it, so loosing this target is a-okay.
