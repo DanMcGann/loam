@@ -1,11 +1,14 @@
-project(Loam CXX C)
+# CMAKE CONFIG
 cmake_minimum_required(VERSION 2.8.3)
-set (CMAKE_CXX_STANDARD 17)
-include(FetchContent)
+cmake_policy(SET CMP0048 NEW)
+# PROJECT INFO
+project(Loam LANGUAGES CXX C VERSION 1.0.0)
+set(CMAKE_CXX_STANDARD 17)
 
 message(STATUS "================  BUILDING LOAM  ======================")
 
 # Dependencies
+include(FetchContent)
 # Eigen - used by ceres and during registration
 find_package(Eigen3 REQUIRED)
 # Ceres - used to solve ICF in registration 
