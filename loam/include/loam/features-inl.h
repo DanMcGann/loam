@@ -8,7 +8,7 @@
 namespace loam {
 
 /*********************************************************************************************************************/
-template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+template <template <typename> class Accessor, typename PointType, template <typename> class Alloc>
 LoamFeatures<PointType, Alloc> extractFeatures(const std::vector<PointType, Alloc<PointType>>& input_scan,
                                                const LidarParams& lidar_params, const FeatureExtractionParams& params) {
   validateLidarScan(input_scan, lidar_params);
@@ -50,7 +50,7 @@ LoamFeatures<PointType, Alloc> extractFeatures(const std::vector<PointType, Allo
 }
 
 /*********************************************************************************************************************/
-template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+template <template <typename> class Accessor, typename PointType, template <typename> class Alloc>
 std::vector<PointCurvature> computeCurvature(const std::vector<PointType, Alloc<PointType>>& input_scan,
                                              const LidarParams& lidar_params, const FeatureExtractionParams& params) {
   validateLidarScan(input_scan, lidar_params);
@@ -87,7 +87,7 @@ std::vector<PointCurvature> computeCurvature(const std::vector<PointType, Alloc<
 }
 
 /*********************************************************************************************************************/
-template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+template <template <typename> class Accessor, typename PointType, template <typename> class Alloc>
 std::vector<bool> computeValidPoints(const std::vector<PointType, Alloc<PointType>>& input_scan,
                                      const LidarParams& lidar_params, const FeatureExtractionParams& params) {
   validateLidarScan(input_scan, lidar_params);

@@ -8,7 +8,7 @@
 namespace loam {
 
 /*********************************************************************************************************************/
-template <template <typename> class Accessor = FieldAccessor, typename PointType, template <typename> class Alloc>
+template <template <typename> class Accessor, typename PointType, template <typename> class Alloc>
 Pose3d registerFeatures(const LoamFeatures<PointType, Alloc>& source, const LoamFeatures<PointType, Alloc>& target,
                         const Pose3d& target_T_source_init, const RegistrationParams& params,
                         std::shared_ptr<RegistrationDetail> detail) {
