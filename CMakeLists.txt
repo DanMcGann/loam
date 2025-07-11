@@ -36,7 +36,7 @@ FetchContent_MakeAvailable(nanoflann)
 file(GLOB loam_srcs "${CMAKE_CURRENT_SOURCE_DIR}/loam/src/*.cpp")
 file(GLOB loam_hdrs "${CMAKE_CURRENT_SOURCE_DIR}/loam/include/loam/*.h")
 add_library(loam SHARED ${loam_srcs} ${loam_hdrs})
-target_link_libraries(loam PUBLIC Eigen3::Eigen Ceres::ceres nanoflann)
+target_link_libraries(loam PUBLIC Eigen3::Eigen Ceres::ceres nanoflann::nanoflann)
 target_include_directories(loam PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/loam/include")
 
 # If testing is configured, setup the tests
